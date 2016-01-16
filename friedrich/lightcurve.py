@@ -20,7 +20,7 @@ def kepler17_params_db():
 
     http://exoplanets.org/detail/Kepler-17_b ,
 
-    which are largely from Désert et al. 2011:
+    which are largely from Desert et al. 2011:
 
     http://adsabs.harvard.edu/abs/2011ApJS..197...14D
     """

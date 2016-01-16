@@ -52,11 +52,15 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
     amplitudes = spot_params[::3]
     t0s = spot_params[1::3]
     sigmas = spot_params[2::3]
-
+    # print('depth', depth)
+    # print('amp', amplitudes)
+    # print('t0', t0s)
+    # print('sigmas', sigmas)
     if (((0 <= amplitudes) & (amplitudes < 0.2)).all() and
         ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all() and
         ((0.5/60/24 < sigmas) &
-             (sigmas < upper_t_bound - lower_t_bound)).all()):
+             (sigmas < upper_t_bound - lower_t_bound)).all() and
+        ((0.002 <= depth) & (depth < 0.005)).all()):
         return 0.0
     return -np.inf
 
@@ -66,11 +70,11 @@ def lnlike(theta, x, y, yerr, transit_params):
     return -0.5*np.sum((y-model)**2/yerr**2)
 
 
-def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound):
+def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params):
     lp = lnprior(theta, y, lower_t_bound, upper_t_bound)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + lnlike(theta, x, y, yerr)
+    return lp + lnlike(theta, x, y, yerr, transit_params)
 
 
 def spotted_transit_model(theta, times, transit_params):
@@ -97,30 +101,40 @@ def spotted_transit_model(theta, times, transit_params):
     spot_model = summed_gaussians(times, spot_params)
     return transit_model + spot_model
 
-def run_emcee_seeded(times, residuals, errors, transit_params,
-                     spot_parameters, burnin=0.7):
+
+def run_emcee_seeded(times, fluxes, errors, transit_params,
+                     spot_parameters, burnin=0.7, n_extra_spots=1):
     """Fit depth + spots given initial guess from `peak_finder`"""
 
     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params)
-
+    amps = spot_parameters[::3]
     init_depth = transit_params.rp**2
-    fit_params = np.concatenate([[init_depth], spot_parameters])
+    extra_spot_params = [0.1*np.min(amps), np.mean(times),
+                         0.25*(upper_t_bound-lower_t_bound)]
+    fit_params = np.concatenate([[init_depth], spot_parameters,
+                                 n_extra_spots*extra_spot_params])
 
-    ndim, nwalkers = len(fit_params), 10*len(fit_params)
+    ndim, nwalkers = len(fit_params), 2*len(fit_params)
     pos = []
 
     while len(pos) < nwalkers:
-        realization = fit_params + 1e-3*np.random.randn(ndim)
-        if lnprior(realization, residuals, lower_t_bound, upper_t_bound) == 0.0:
+        realization = fit_params + 1e-4*np.random.randn(ndim)
+        # plt.plot(times, fluxes, '.')
+        # plt.plot(times, spotted_transit_model(realization, times, transit_params))
+        # plt.show()
+        if lnprior(realization, fluxes, lower_t_bound, upper_t_bound) == 0.0:
             pos.append(realization)
 
-    pool = emcee.interruptible_pool.InterruptiblePool(processes=4)
+
+    print('Begin MCMC...')
+    pool = emcee.interruptible_pool.InterruptiblePool(processes=8)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
-                                    args=(times, residuals, errors,
-                                          lower_t_bound, upper_t_bound),
+                                    args=(times, fluxes, errors, lower_t_bound,
+                                          upper_t_bound, transit_params),
                                     pool=pool)
-    n_steps = 25000
+    n_steps = 10000
     sampler.run_mcmc(pos, n_steps)
+    print('Finished MCMC...')
     burnin_len = int(burnin*n_steps)
     samples = sampler.chain[:, burnin_len:, :].reshape((-1, ndim))
     return sampler, samples
@@ -209,9 +223,11 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
                                   args=(times, residuals, errors),
                                   xtol=0.00001, ftol=0.00001)
 
+    # Since params like sigma can't be forced to be positive w/ fmin_powell:
+    result = np.abs(result)
     # if np.all(result == input_parameters):
     #     print 'oh no!, fmin didnt produce a fit')
-    print(result)
+
     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
     split_result = np.split(result, len(input_parameters)/3)
     result_in_transit = []
