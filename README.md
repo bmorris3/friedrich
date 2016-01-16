@@ -1,2 +1,2 @@
 # friedrich
-A reductionist's photometric inversion
+A reductionist's photometric inversion toolkit.
