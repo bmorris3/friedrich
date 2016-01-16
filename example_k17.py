@@ -13,7 +13,7 @@ import numpy as np
 from astropy.utils.console import ProgressBar
 
 # Settings:
-plots = False
+plots = True
 light_curve_paths = glob('/Users/bmmorris/data/kepler17/*slc.fits')
 depth = 0.13031**2
 kepler17_params = kepler17_params_db()
@@ -74,7 +74,6 @@ with ProgressBar(len(transits)) as bar:
                 ax[2].set_title(r'$Delta \chi^2$ = '+'{0}'
                                 .format(delta_chi2[i]))
 
-                fig.tight_layout()
                 fig.savefig('plots/{0:03d}.png'.format(i))
                 #plt.show()
                 plt.close()

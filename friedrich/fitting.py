@@ -15,9 +15,11 @@ def summed_gaussians(times, input_parameters):
     Take a list of gaussian input parameters (3 parameters per gaussian), make a model of the
     sum of all of those gaussians.
     """
-    model = np.zeros(len(times), dtype=np.float64)
-    if input_parameters is not None:
-        split_input_parameters = np.split(np.array(input_parameters), len(input_parameters)/3)
+    model = np.zeros(len(times), dtype=np.float128)
+
+    if input_parameters is not None and len(input_parameters) % 3 == 0:
+        split_input_parameters = np.split(input_parameters,
+                                          int(len(input_parameters)/3))
         for amplitude, t0, sigma in split_input_parameters:
             model += gaussian(times, amplitude, t0, sigma)
 
@@ -44,7 +46,8 @@ def summed_gaussians(times, input_parameters):
 def get_in_transit_bounds(x, params, duration_fraction=0.7):
     phased = (x - params.t0) % params.per
     near_transit = ((phased < params.duration*(0.5*duration_fraction)) |
-                    (phased > params.per - params.duration*(0.5*duration_fraction)))
+                    (phased > params.per -
+                     params.duration*(0.5*duration_fraction)))
     if np.count_nonzero(near_transit) == 0:
         near_transit = 0
     return (x[near_transit].min(), x[near_transit].max())
@@ -134,14 +137,16 @@ def chi2(theta, x, y, yerr):
     return np.sum((y-model)**2/yerr**2)
 
 
-def peak_finder(times, residuals, errors, params, n_peaks=4, plots=False, verbose=False):
+def peak_finder(times, residuals, errors, params, n_peaks=4, plots=False,
+                verbose=False):
     # http://stackoverflow.com/a/25666951
     # Convolve residuals with a gaussian, find relative maxima
     n_points_kernel = 100
-    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=12)
+    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=3.5)
     filtered = signal.fftconvolve(window, residuals)
     filtered = (np.average(residuals) / np.average(filtered)) * filtered
     filtered = np.roll(filtered, int(-n_points_kernel/2))
+
     maxes = signal.argrelmax(filtered)[0]
     maxes = maxes[maxes < len(residuals)]
     maxes = maxes[residuals[maxes] > 0]
@@ -156,14 +161,17 @@ def peak_finder(times, residuals, errors, params, n_peaks=4, plots=False, verbos
         return None
 
     peak_times = times[maxes_in_transit]
-    peak_amplitudes = residuals[maxes_in_transit]#len(peak_times)*[3*np.std(residuals)]
-    peak_sigmas = len(peak_times)*[4./60/24] # 5 min
-    input_parameters = np.vstack([peak_amplitudes, peak_times, peak_sigmas]).T.ravel()
-    # result = optimize.fmin(chi2, input_parameters, args=(times, residuals, errors))
-    result = optimize.fmin_bfgs(chi2, input_parameters, disp=False,
-                                args=(times, residuals, errors))        
-    #print(result, result == input_parameters)
-    
+    peak_amplitudes = residuals[maxes_in_transit]
+    peak_sigmas = np.zeros(len(peak_times)) + 3./60/24  # 3 min
+    input_parameters = np.vstack([peak_amplitudes, peak_times,
+                                  peak_sigmas]).T.ravel()
+
+    result = optimize.fmin(chi2, input_parameters, disp=False,
+                           args=(times, residuals, errors))
+
+    # if np.all(result == input_parameters):
+    #     print 'oh no!, fmin didnt produce a fit')
+
     if plots:
         fig, ax = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
     

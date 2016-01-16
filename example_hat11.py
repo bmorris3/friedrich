@@ -1,7 +1,7 @@
 """
 Experiment with Kepler 17
 """
-from __future__ import absolute_import, print_function
+#from __future__ import absolute_import, print_function
 from glob import glob
 
 from friedrich.lightcurve import (LightCurve, generate_lc_depth,
@@ -36,7 +36,7 @@ with ProgressBar(len(transits)) as bar:
 
         # Find peaks in the light curve residuals
         best_fit_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                      hat11_params)
+                                      hat11_params, n_peaks=2)
         best_fit_gaussian_model = summed_gaussians(lc.times.jd, best_fit_params)
 
         # Measure delta chi^2
@@ -74,7 +74,7 @@ with ProgressBar(len(transits)) as bar:
                 ax[2].set_title(r'$Delta \chi^2$ = '+'{0}'
                                 .format(delta_chi2[i]))
 
-                fig.tight_layout()
+                #fig.tight_layout()
                 fig.savefig('plots/{0:03d}.png'.format(i))
                 #plt.show()
                 plt.close()
