@@ -19,7 +19,7 @@ depth = 0.00343
 hat11_params = hat11_params_morris()
 
 # Construct light curve object from the raw data
-whole_lc = LightCurve.from_raw_fits(light_curve_paths, name='Kepler17')
+whole_lc = LightCurve.from_raw_fits(light_curve_paths, name='HAT11')
 transits = LightCurve(**whole_lc.mask_out_of_transit(hat11_params)
                       ).get_transit_light_curves(hat11_params)
 
