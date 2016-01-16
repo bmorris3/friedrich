@@ -48,6 +48,34 @@ def kepler17_params_db():
     return params
 
 
+def hat11_params_morris():
+    """
+    Parameters from Brett
+    """
+    ecosw = 0.261  # Winn et al. 2011
+    esinw = 0.085  # Winn et al. 2011
+    eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    params = batman.TransitParams()
+    params.t0 = 2454605.89159720           # time of inferior conjunction
+    params.per = 4.88780233               # orbital period
+    params.rp = 0.00343**0.5          # planet radius (in units of stellar radii)
+    b = 0.127                       # impact parameter
+    dur = 0.0982                        # transit duration
+    params.inc = 89.4234790468                # orbital inclination (in degrees)
+
+    params.ecc = eccentricity                      # eccentricity
+    params.w = omega                       # longitude of periastron (in degrees)
+    params.a = 14.7663717                # semi-major axis (in units of stellar radii)
+    params.u = [0.5636, 0.1502]                # limb darkening coefficients
+    params.limb_dark = "quadratic"       # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = dur
+    return params
+
+
 def generate_lc_depth(times, depth, init_params):
     exp_time = (1*u.min).to(u.day).value
 
