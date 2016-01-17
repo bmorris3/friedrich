@@ -9,16 +9,13 @@ from friedrich.lightcurve import (LightCurve, generate_lc_depth,
                                   hat11_params_morris)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
 
-import matplotlib.pyplot as plt
-from corner import corner
-
 # Settings:
 plots = True
 
 if os.path.exists('/Users/bmmorris/data/hat11/'):
     # on laptop:
     light_curve_paths = glob('/Users/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('~/data/')
+    output_dir = os.path.abspath('/Users/bmmorris/data')
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
@@ -52,16 +49,15 @@ best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
 best_fit_gaussian_model = summed_gaussians(lc.times.jd, best_fit_spot_params)
 
 output_path = os.path.join(output_dir,
-                           'chains{0:3d}.txt'.format(transit_number))
-sampler, samples = run_emcee_seeded(lc.times.jd, lc.fluxes, lc.errors,
-                                    hat11_params, best_fit_spot_params,
-                                    n_steps=10000, n_walkers=100, n_threads=32,
-                                    output_path=output_path,
-                                    burnin=0.7, n_extra_spots=1)
+                           'chains{0:03d}.hdf5'.format(transit_number))
+sampler = run_emcee_seeded(lc, hat11_params, best_fit_spot_params,
+                           n_steps=500, n_walkers=40, n_threads=8,
+                           output_path=output_path,
+                           burnin=0.0, n_extra_spots=1)
 
-corner(samples)
-plt.savefig('tmp.png')
-plt.show()
+#corner(samples)
+#plt.savefig('tmp.png')
+#plt.show()
 # if best_fit_params is not None:
 #     split_input_parameters = np.split(np.array(best_fit_params),
 #                                       len(best_fit_params)/3)

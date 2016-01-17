@@ -1,13 +1,14 @@
 
 from __future__ import absolute_import, print_function
+
+from .storage import create_results_archive
+
 import numpy as np
 import emcee
 from scipy import optimize, signal
 import matplotlib.pyplot as plt
 import batman
 from copy import deepcopy
-import os
-
 
 def gaussian(times, amplitude, t0, sigma):
     return amplitude * np.exp(-0.5*(times - t0)**2/sigma**2)
@@ -54,10 +55,7 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
     amplitudes = spot_params[::3]
     t0s = spot_params[1::3]
     sigmas = spot_params[2::3]
-    # print('depth', depth)
-    # print('amp', amplitudes)
-    # print('t0', t0s)
-    # print('sigmas', sigmas)
+
     if (((0 <= amplitudes) & (amplitudes < 0.2)).all() and
         ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all() and
         ((0.5/60/24 < sigmas) &
@@ -104,10 +102,43 @@ def spotted_transit_model(theta, times, transit_params):
     return transit_model + spot_model
 
 
-def run_emcee_seeded(times, fluxes, errors, transit_params, spot_parameters,
-                     n_steps, n_walkers, n_threads, output_path, burnin=0.7,
+def spotted_transit_model_individuals(theta, times, transit_params):
+    """
+    Compute sum of each spot model and the transit model
+
+    Parameters
+    ----------
+    theta
+    times
+    transit_params
+
+    Returns
+    -------
+
+    """
+    depth, spot_params = theta[0], theta[1:]
+
+    # Copy initial transit parameters
+    transit_params_tmp = deepcopy(transit_params)
+    # Set depth according to input parameters, comput transit model
+    transit_params_tmp.rp = depth**0.5
+
+    split_spot_params = np.split(spot_params,
+                                      len(spot_params)/3)
+
+    transit_model = generate_lc(times, transit_params_tmp)
+    return [transit_model + summed_gaussians(times, spot_params)
+            for spot_params in split_spot_params]
+
+
+def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
+                     n_walkers, n_threads, output_path, burnin=0.7,
                      n_extra_spots=1):
     """Fit depth + spots given initial guess from `peak_finder`"""
+
+    times = light_curve.times.jd
+    fluxes = light_curve.fluxes
+    errors = light_curve.errors
 
     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params)
     amps = spot_parameters[::3]
@@ -117,7 +148,7 @@ def run_emcee_seeded(times, fluxes, errors, transit_params, spot_parameters,
     fit_params = np.concatenate([[init_depth], spot_parameters,
                                  n_extra_spots*extra_spot_params])
 
-    ndim, nwalkers = len(fit_params), 4*len(fit_params)
+    ndim, nwalkers = len(fit_params), n_walkers
     pos = []
 
     while len(pos) < nwalkers:
@@ -135,9 +166,16 @@ def run_emcee_seeded(times, fluxes, errors, transit_params, spot_parameters,
 
     print('Finished MCMC...')
     burnin_len = int(burnin*n_steps)
-    samples = sampler.chain[:, burnin_len:, :].reshape((-1, ndim))
-    np.savetxt(output_path, samples)
-    return sampler, samples
+
+    create_results_archive(output_path, light_curve, sampler, burnin_len, ndim)
+    # samples = sampler.chain[:, burnin_len:, :].reshape((-1, ndim))
+    #
+    # best_params = sampler.flatchain[np.argmax(sampler.flatlnprobability)]
+    # np.savetxt(output_path+'_lnprob.txt',
+    #            sampler.lnprobability[:, burnin_len:].T)
+    # np.savetxt(output_path+'_samples.txt', samples)
+    # np.savetxt(output_path+'_bestparams.txt', best_params)
+    return sampler
 
 
 def peak_finder_chi2(theta, x, y, yerr):
