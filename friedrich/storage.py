@@ -39,9 +39,6 @@ def create_results_archive(archive_path, light_curve, sampler, burnin_len, ndim,
                                    shape=lc_matrix.shape)
         lc_dset[:] = lc_matrix
 
-        # Update attributes on `holograms` with metadata
-        #f['holograms'].attrs.update(metadata)
-
 
 def read_results_archive(archive_path, compression=default_compression):
     with h5py.File(archive_path, 'r') as f:

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import batman
 from copy import deepcopy
 
+
 def gaussian(times, amplitude, t0, sigma):
     return amplitude * np.exp(-0.5*(times - t0)**2/sigma**2)
 
@@ -56,11 +57,13 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
     t0s = spot_params[1::3]
     sigmas = spot_params[2::3]
 
-    if (((0 <= amplitudes) & (amplitudes < 0.2)).all() and
-        ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all() and
-        ((0.5/60/24 < sigmas) &
-             (sigmas < upper_t_bound - lower_t_bound)).all() and
-        ((0.002 <= depth) & (depth < 0.005)).all()):
+    amplitude_ok = ((0 <= amplitudes) & (amplitudes < 0.2)).all()
+    t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
+    sigma_ok = ((0.5/60/24 < sigmas) &
+                (sigmas < upper_t_bound - lower_t_bound)).all()
+    depth_ok = ((0.002 <= depth) & (depth < 0.005)).all()
+
+    if (amplitude_ok and t0_ok and sigma_ok and depth_ok):
         return 0.0
     return -np.inf
 
@@ -123,8 +126,7 @@ def spotted_transit_model_individuals(theta, times, transit_params):
     # Set depth according to input parameters, comput transit model
     transit_params_tmp.rp = depth**0.5
 
-    split_spot_params = np.split(spot_params,
-                                      len(spot_params)/3)
+    split_spot_params = np.split(spot_params, len(spot_params)/3)
 
     transit_model = generate_lc(times, transit_params_tmp)
     return [transit_model + summed_gaussians(times, spot_params)
@@ -143,8 +145,9 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params)
     amps = spot_parameters[::3]
     init_depth = transit_params.rp**2
+
     extra_spot_params = [0.1*np.min(amps), np.mean(times),
-                         0.25*(upper_t_bound-lower_t_bound)]
+                         0.2*(upper_t_bound-lower_t_bound)]
     fit_params = np.concatenate([[init_depth], spot_parameters,
                                  n_extra_spots*extra_spot_params])
 
@@ -152,7 +155,8 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     pos = []
 
     while len(pos) < nwalkers:
-        realization = fit_params + 1e-4*np.random.randn(ndim)
+        realization = fit_params + 1e-5*np.random.randn(ndim)
+
         if lnprior(realization, fluxes, lower_t_bound, upper_t_bound) == 0.0:
             pos.append(realization)
 
@@ -235,16 +239,16 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
     else:
         highest_maxes_in_transit = maxes_in_transit
 
-    # plt.plot(times, filtered)
-    # plt.plot(times, residuals, '.')
-    # plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
-    # [plt.axvline(times[m], color='k') for m in maxes]
-    # [plt.axvline(times[m], color='m') for m in maxes_in_transit]
-    # if len(maxes_in_transit) > n_peaks:
-    #     [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
-    # plt.axvline(upper_t_bound, color='r')
-    # plt.axvline(lower_t_bound, color='r')
-    # plt.show()
+    plt.plot(times, filtered)
+    plt.plot(times, residuals, '.')
+    plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
+    [plt.axvline(times[m], color='k') for m in maxes]
+    [plt.axvline(times[m], color='m') for m in maxes_in_transit]
+    if len(maxes_in_transit) > n_peaks:
+        [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
+    plt.axvline(upper_t_bound, color='r')
+    plt.axvline(lower_t_bound, color='r')
+    plt.show()
 
     if len(maxes_in_transit) == 0:
         if verbose: 
@@ -253,7 +257,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
 
     peak_times = times[highest_maxes_in_transit]
     peak_amplitudes = residuals[highest_maxes_in_transit]
-    peak_sigmas = np.zeros(len(highest_maxes_in_transit)) + 2./60/24  # 3 min
+    peak_sigmas = np.zeros(len(peak_times)) + 2./60/24  # 3 min
     input_parameters = np.vstack([peak_amplitudes, peak_times,
                                   peak_sigmas]).T.ravel()
 
@@ -262,36 +266,47 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
                                   xtol=0.00001, ftol=0.00001)
 
     # Since params like sigma can't be forced to be positive w/ fmin_powell:
-    result = np.abs(result)
+    #result = np.abs(result)
     # if np.all(result == input_parameters):
     #     print 'oh no!, fmin didnt produce a fit')
 
     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
+    # and amplitude is positive:
     split_result = np.split(result, len(input_parameters)/3)
     result_in_transit = []
     for amplitude, t0, sigma in split_result:
-        if (t0 < upper_t_bound) and (t0 > lower_t_bound):
-            result_in_transit.extend([amplitude, t0, sigma])
+        if (t0 < upper_t_bound) and (t0 > lower_t_bound) and (amplitude > 0):
+            result_in_transit.extend([amplitude, t0, np.abs(sigma)])
+    result_in_transit = np.array(result_in_transit)
+
+    if len(result_in_transit) == 0:
+        return None
 
     if plots:
         fig, ax = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
     
         ax[0].errorbar(times, residuals, fmt='.', color='k')
-        [ax[0].axvline(t) for t in times[maxes_in_transit]]
+        [ax[0].axvline(t) for t in result_in_transit[1::3]]
         ax[0].plot(times, summed_gaussians(times, input_parameters), 'r')
         ax[0].axhline(0, color='k', ls='--')
         ax[0].set_ylabel('Transit Residuals')
-    
+
         ax[1].errorbar(times, residuals, fmt='.', color='k')
-        ax[1].plot(times, summed_gaussians(times, result), 'r')
+        ax[1].plot(times, summed_gaussians(times, result_in_transit), 'r')
         ax[1].axhline(0, color='k', ls='--')
         ax[1].set_ylabel('Residuals')
     
-        ax[2].errorbar(times, residuals - summed_gaussians(times, result), fmt='.', color='k')
+        ax[2].errorbar(times,
+                       residuals - summed_gaussians(times, result_in_transit),
+                       fmt='.', color='k')
         #ax[1].errorbar(times, gaussian_model, fmt='.', color='r')
         ax[2].axhline(0, color='k', ls='--')
         ax[2].set_ylabel('Residuals')
 
+        for axis in ax:
+            axis.axvline(upper_t_bound, color='r')
+            axis.axvline(lower_t_bound, color='r')
+
         fig.tight_layout()
         plt.show()
-    return result
+    return result_in_transit
