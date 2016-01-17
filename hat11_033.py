@@ -18,9 +18,12 @@ plots = True
 if os.path.exists('/Users/bmmorris/data/hat11/'):
     # on laptop:
     light_curve_paths = glob('/Users/bmmorris/data/hat11/*slc.fits')
+    output_dir = os.path.abspath('~/data/')
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/')
+
 else:
     raise ValueError('No input files found.')
 
@@ -34,7 +37,8 @@ transits = LightCurve(**whole_lc.mask_out_of_transit(hat11_params)
 
 
 #lc = transits[33]
-lc = transits[24]
+transit_number = 24
+lc = transits[transit_number]
 lc.remove_linear_baseline(hat11_params)
 
 # Subtract out a transit model
@@ -47,10 +51,12 @@ best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd, best_fit_spot_params)
 
+output_path = os.path.join(output_dir,
+                           'chains{0:3d}.txt'.format(transit_number))
 sampler, samples = run_emcee_seeded(lc.times.jd, lc.fluxes, lc.errors,
                                     hat11_params, best_fit_spot_params,
                                     n_steps=10000, n_walkers=100, n_threads=32,
-                                    output_path=os.path.abspath('~/data/chains.txt'),
+                                    output_path=output_path,
                                     burnin=0.7, n_extra_spots=1)
 
 corner(samples)
