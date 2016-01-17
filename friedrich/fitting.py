@@ -40,7 +40,7 @@ def summed_gaussians(times, spot_parameters):
     return model
 
 
-def get_in_transit_bounds(x, params, duration_fraction=0.7):
+def get_in_transit_bounds(x, params, duration_fraction=0.9):
     phased = (x - params.t0) % params.per
     near_transit = ((phased < params.duration*(0.5*duration_fraction)) |
                     (phased > params.per -
@@ -239,16 +239,16 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
     else:
         highest_maxes_in_transit = maxes_in_transit
 
-    plt.plot(times, filtered)
-    plt.plot(times, residuals, '.')
-    plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
-    [plt.axvline(times[m], color='k') for m in maxes]
-    [plt.axvline(times[m], color='m') for m in maxes_in_transit]
-    if len(maxes_in_transit) > n_peaks:
-        [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
-    plt.axvline(upper_t_bound, color='r')
-    plt.axvline(lower_t_bound, color='r')
-    plt.show()
+    # plt.plot(times, filtered)
+    # plt.plot(times, residuals, '.')
+    # plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
+    # [plt.axvline(times[m], color='k') for m in maxes]
+    # [plt.axvline(times[m], color='m') for m in maxes_in_transit]
+    # if len(maxes_in_transit) > n_peaks:
+    #     [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
+    # plt.axvline(upper_t_bound, color='r')
+    # plt.axvline(lower_t_bound, color='r')
+    # plt.show()
 
     if len(maxes_in_transit) == 0:
         if verbose: 
@@ -275,7 +275,10 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
     split_result = np.split(result, len(input_parameters)/3)
     result_in_transit = []
     for amplitude, t0, sigma in split_result:
-        if (t0 < upper_t_bound) and (t0 > lower_t_bound) and (amplitude > 0):
+        depth = transit_params.rp**2
+
+        trial_params = np.array([depth, amplitude, t0, sigma])
+        if lnprior(trial_params, residuals, lower_t_bound, upper_t_bound) == 0:
             result_in_transit.extend([amplitude, t0, np.abs(sigma)])
     result_in_transit = np.array(result_in_transit)
 
