@@ -6,6 +6,8 @@ from scipy import optimize, signal
 import matplotlib.pyplot as plt
 import batman
 from copy import deepcopy
+import os
+
 
 def gaussian(times, amplitude, t0, sigma):
     return amplitude * np.exp(-0.5*(times - t0)**2/sigma**2)
@@ -102,8 +104,9 @@ def spotted_transit_model(theta, times, transit_params):
     return transit_model + spot_model
 
 
-def run_emcee_seeded(times, fluxes, errors, transit_params,
-                     spot_parameters, burnin=0.7, n_extra_spots=1):
+def run_emcee_seeded(times, fluxes, errors, transit_params, spot_parameters,
+                     n_steps, n_walkers, n_threads, output_path, burnin=0.7,
+                     n_extra_spots=1):
     """Fit depth + spots given initial guess from `peak_finder`"""
 
     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params)
@@ -114,29 +117,26 @@ def run_emcee_seeded(times, fluxes, errors, transit_params,
     fit_params = np.concatenate([[init_depth], spot_parameters,
                                  n_extra_spots*extra_spot_params])
 
-    ndim, nwalkers = len(fit_params), 2*len(fit_params)
+    ndim, nwalkers = len(fit_params), 4*len(fit_params)
     pos = []
 
     while len(pos) < nwalkers:
         realization = fit_params + 1e-4*np.random.randn(ndim)
-        # plt.plot(times, fluxes, '.')
-        # plt.plot(times, spotted_transit_model(realization, times, transit_params))
-        # plt.show()
         if lnprior(realization, fluxes, lower_t_bound, upper_t_bound) == 0.0:
             pos.append(realization)
 
-
     print('Begin MCMC...')
-    pool = emcee.interruptible_pool.InterruptiblePool(processes=8)
+    pool = emcee.interruptible_pool.InterruptiblePool(processes=n_threads)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(times, fluxes, errors, lower_t_bound,
                                           upper_t_bound, transit_params),
                                     pool=pool)
-    n_steps = 10000
     sampler.run_mcmc(pos, n_steps)
+
     print('Finished MCMC...')
     burnin_len = int(burnin*n_steps)
     samples = sampler.chain[:, burnin_len:, :].reshape((-1, ndim))
+    np.savetxt(output_path, samples)
     return sampler, samples
 
 
@@ -219,8 +219,8 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
     input_parameters = np.vstack([peak_amplitudes, peak_times,
                                   peak_sigmas]).T.ravel()
 
-    result = optimize.fmin_powell(peak_finder_chi2, input_parameters, disp=False,
-                                  args=(times, residuals, errors),
+    result = optimize.fmin_powell(peak_finder_chi2, input_parameters,
+                                  disp=False, args=(times, residuals, errors),
                                   xtol=0.00001, ftol=0.00001)
 
     # Since params like sigma can't be forced to be positive w/ fmin_powell:

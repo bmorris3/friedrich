@@ -1,21 +1,29 @@
 """
 Experiment with Kepler 17
 """
-#from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function
 from glob import glob
+import os
 
 from friedrich.lightcurve import (LightCurve, generate_lc_depth,
                                   hat11_params_morris)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
 
 import matplotlib.pyplot as plt
-import numpy as np
-from astropy.utils.console import ProgressBar
 from corner import corner
 
 # Settings:
 plots = True
-light_curve_paths = glob('/Users/bmmorris/data/hat11/*slc.fits')
+
+if os.path.exists('/Users/bmmorris/data/hat11/'):
+    # on laptop:
+    light_curve_paths = glob('/Users/bmmorris/data/hat11/*slc.fits')
+elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
+    # on Hyak
+    light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
+else:
+    raise ValueError('No input files found.')
+
 depth = 0.00343
 hat11_params = hat11_params_morris()
 
@@ -39,12 +47,14 @@ best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd, best_fit_spot_params)
 
-
 sampler, samples = run_emcee_seeded(lc.times.jd, lc.fluxes, lc.errors,
                                     hat11_params, best_fit_spot_params,
+                                    n_steps=10000, n_walkers=100, n_threads=32,
+                                    output_path=os.path.abspath('~/data/chains.txt'),
                                     burnin=0.7, n_extra_spots=1)
 
 corner(samples)
+plt.savefig('tmp.png')
 plt.show()
 # if best_fit_params is not None:
 #     split_input_parameters = np.split(np.array(best_fit_params),
