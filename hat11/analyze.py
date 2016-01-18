@@ -2,8 +2,12 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+# Import dev version of friedrich:
+import sys
+sys.path.insert(0, '../')
 from friedrich.analysis import MCMCResults
 from friedrich.lightcurve import hat11_params_morris
+
 import matplotlib.pyplot as plt
 import sys
 

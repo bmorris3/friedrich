@@ -5,6 +5,9 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from glob import glob
 
+# Import dev version of friedrich:
+import sys
+sys.path.insert(0, '../')
 from friedrich.lightcurve import (LightCurve, generate_lc_depth,
                                   hat11_params_morris)
 from friedrich.fitting import peak_finder, summed_gaussians, gaussian
