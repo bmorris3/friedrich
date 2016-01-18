@@ -1,7 +1,7 @@
 
+import os
 
-submit_template = """
-#!/bin/bash
+submit_template = """#!/bin/bash
 ## --------------------------------------------------------
 ## NOTE: to submit jobs to Hyak use
 ##       qsub <script.sh>
@@ -69,28 +69,34 @@ echo "== END DEBUGGING INFORMATION  ========================"
 cd $PBS_O_WORKDIR
 
 python {run_script} {transit_number}
-
 """
 
 if __name__ == '__main__':
-    job_name = 'test1'
-    run_dir = log_dir = '/gscratch/stf/bmmorris/tmp/'
-    walltime = '01:00:00'
-    email = 'bmmorris@uw.edu'
-    run_script = '/usr/lusers/bmmorris/git/friedrich/hat11_hyak.py'
-    transit_number = '62'
-    submit_script_path = 'submit_script_{0}.sh'.format(transit_number)
+    n_transits = 205
+    submit_script_dir = '/gscratch/stf/bmmorris/friedrich/submit_scripts'
 
-    submit_script = submit_template.format(job_name=job_name,
-                                           run_dir=run_dir,
-                                           log_dir=log_dir,
-                                           walltime=walltime,
-                                           email=email,
-                                           run_script=run_script,
-                                           transit_number=transit_number)
+    for i in range(n_transits):
+        job_name = 'friedrich'
+        run_dir = log_dir = '/gscratch/stf/bmmorris/friedrich/logs'
+        walltime = '01:00:00'
+        email = 'bmmorris@uw.edu'
+        run_script = '/usr/lusers/bmmorris/git/friedrich/hat11_hyak.py'
+        transit_number = str(i)
+        submit_script_name = 'submit_script_{0}.sh'.format(transit_number)
 
-    with open(submit_script_path, 'w') as f:
-        f.write(submit_script)
+        submit_script = submit_template.format(job_name=job_name,
+                                               run_dir=run_dir,
+                                               log_dir=log_dir,
+                                               walltime=walltime,
+                                               email=email,
+                                               run_script=run_script,
+                                               transit_number=transit_number)
+
+        submit_script_path = os.path.join(submit_script_dir, submit_script_name)
+        with open(submit_script_path, 'w') as f:
+            f.write(submit_script)
+
+        os.system('qsub {0}'.format(submit_script_path()))
 
 ## PBS -W group_list=hyak-stf
 #PBS -q bf
