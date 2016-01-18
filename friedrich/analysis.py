@@ -20,12 +20,14 @@ class MCMCResults(object):
                                     errors=lc_matrix[2, :])
 
     def plot_lnprob(self):
+        plt.figure()
         plt.title('$\log \,p$')
         plt.plot(self.lnprob)
         plt.xlabel('Step')
         plt.ylabel('$\log \,p$')
 
     def plot_corner(self):
+        plt.figure()
         labels = ['depth']
         for i in range(self.chains.shape[0]):
             labels.extend(['$a_{0}$'.format(i), '$t_{{0,{0}}}$'.format(i),
