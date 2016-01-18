@@ -96,7 +96,7 @@ if __name__ == '__main__':
         with open(submit_script_path, 'w') as f:
             f.write(submit_script)
 
-        os.system('qsub {0}'.format(submit_script_path()))
+        os.system('qsub {0}'.format(submit_script_path))
 
 ## PBS -W group_list=hyak-stf
 #PBS -q bf
