@@ -26,13 +26,12 @@ class MCMCResults(object):
         plt.xlabel('Step')
         plt.ylabel('$\log \,p$')
 
-    def plot_corner(self):
-        plt.figure()
+    def plot_corner(self, skip_every=100):
         labels = ['depth']
         for i in range(self.chains.shape[0]):
             labels.extend(['$a_{0}$'.format(i), '$t_{{0,{0}}}$'.format(i),
                            '$\sigma_{0}$'.format(i)])
-        corner(self.chains, labels=labels)
+        corner(self.chains[::skip_every, :], labels=labels)
 
     def plot_max_lnp_lc(self, transit_params):
         model = spotted_transit_model(self.best_params, self.lc.times.jd,
