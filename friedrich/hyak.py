@@ -1,0 +1,96 @@
+
+
+submit_template = """
+#!/bin/bash
+## --------------------------------------------------------
+## NOTE: to submit jobs to Hyak use
+##       qsub <script.sh>
+##
+## #PBS is a directive requesting job scheduling resources
+## and ALL PBS directives must be at the top of the script,
+## standard bash commands can follow afterwards.
+## NOTE: Lines that begin with #PBS are commands to PBS,
+##       and they are not comment lines.  To comment out
+##       use "#  PBS".
+## --------------------------------------------------------
+
+## Job name
+#PBS -N {job_name}
+
+## DIRECTORY where this job is run
+#PBS -d {run_dir}
+
+## GROUP to run under
+## PBS -W group_list=hyak-stf
+#PBS -q bf
+
+## NUMBER nodes, CPUs per node, and MEMORY
+#PBS -l nodes=1:ppn=16,feature=16core,mem=12gb
+
+## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
+#PBS -l walltime={walltime}
+
+## LOG the (stderr and stdout) job output in the directory
+#PBS -j oe -o {log_dir}
+
+## EMAIL to send when job is aborted, begins, and terminates
+#PBS -m abe -M {email}
+
+## --------------------------------------------------------
+## END of PBS commands ... only BASH from here and below
+## --------------------------------------------------------
+
+## LOAD any appropriate environment modules and variables
+## module load git_2.4.4
+
+## --------------------------------------------------------
+## DEBUGGING information (include jobs logs in any help requests)
+## --------------------------------------------------------
+## Total Number of nodes and processors (cores) to be used by the job
+echo "== JOB DEBUGGING INFORMATION=========================="
+HYAK_NNODES=$(uniq $PBS_NODEFILE | wc -l )
+HYAK_NPE=$(wc -l < $PBS_NODEFILE)
+echo "This job will run on $HYAK_NNODES nodes with $HYAK_NPE total CPU-cores"
+echo ""
+echo "Node:CPUs Used"
+uniq -c $PBS_NODEFILE | awk '{{print $2 ":" $1}}'
+echo ""
+echo "ENVIRONMENT VARIABLES"
+set
+echo ""
+echo "== END DEBUGGING INFORMATION  ========================"
+
+
+## --------------------------------------------------------
+## RUN your specific applications/scripts/code here
+## --------------------------------------------------------
+
+## CHANGE directory to where job was submitted (careful, PBS defaults to user home directory)
+cd $PBS_O_WORKDIR
+
+python {run_script} {transit_number}
+
+"""
+
+if __name__ == '__main__':
+    job_name = 'test1'
+    run_dir = log_dir = '/gscratch/stf/bmmorris/tmp/'
+    walltime = '01:00:00'
+    email = 'bmmorris@uw.edu'
+    run_script = '/usr/lusers/bmmorris/git/friedrich/hat11_hyak.py'
+    transit_number = '62'
+    submit_script_path = 'submit_script_{0}.sh'.format(transit_number)
+
+    submit_script = submit_template.format(job_name=job_name,
+                                           run_dir=run_dir,
+                                           log_dir=log_dir,
+                                           walltime=walltime,
+                                           email=email,
+                                           run_script=run_script,
+                                           transit_number=transit_number)
+
+    with open(submit_script_path, 'w') as f:
+        f.write(submit_script)
+
+## PBS -W group_list=hyak-stf
+#PBS -q bf

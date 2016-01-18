@@ -63,7 +63,7 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
                 (sigmas < upper_t_bound - lower_t_bound)).all()
     depth_ok = ((0.002 <= depth) & (depth < 0.005)).all()
 
-    if (amplitude_ok and t0_ok and sigma_ok and depth_ok):
+    if amplitude_ok and t0_ok and sigma_ok and depth_ok:
         return 0.0
     return -np.inf
 
@@ -172,13 +172,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     burnin_len = int(burnin*n_steps)
 
     create_results_archive(output_path, light_curve, sampler, burnin_len, ndim)
-    # samples = sampler.chain[:, burnin_len:, :].reshape((-1, ndim))
-    #
-    # best_params = sampler.flatchain[np.argmax(sampler.flatlnprobability)]
-    # np.savetxt(output_path+'_lnprob.txt',
-    #            sampler.lnprobability[:, burnin_len:].T)
-    # np.savetxt(output_path+'_samples.txt', samples)
-    # np.savetxt(output_path+'_bestparams.txt', best_params)
+
     return sampler
 
 
@@ -265,8 +259,6 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4, plots=False
                                   disp=False, args=(times, residuals, errors),
                                   xtol=0.00001, ftol=0.00001)
 
-    # Since params like sigma can't be forced to be positive w/ fmin_powell:
-    #result = np.abs(result)
     # if np.all(result == input_parameters):
     #     print 'oh no!, fmin didnt produce a fit')
 

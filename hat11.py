@@ -1,5 +1,5 @@
 """
-Experiment with Kepler 17
+Experiment with HAT-P-11
 """
 from __future__ import absolute_import, print_function
 from glob import glob
@@ -54,7 +54,7 @@ for transit_number in transit_numbers:
         output_path = os.path.join(output_dir,
                                    'chains{0:03d}.hdf5'.format(transit_number))
         sampler = run_emcee_seeded(lc, hat11_params, best_fit_spot_params,
-                                   n_steps=15000, n_walkers=200, n_threads=32,
+                                   n_steps=5000, n_walkers=200, n_threads=32,
                                    output_path=output_path, burnin=0.5,
                                    n_extra_spots=1)
 
