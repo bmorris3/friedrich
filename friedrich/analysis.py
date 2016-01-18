@@ -1,6 +1,6 @@
 
-from __future__ import absolute_import, print_function
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 from .fitting import spotted_transit_model, spotted_transit_model_individuals
 from .storage import read_results_archive
 from .lightcurve import TransitLightCurve

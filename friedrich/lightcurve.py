@@ -1,7 +1,9 @@
 """
-Tool for taking the raw data from MAST and producing cleaned light curves
+Tools for taking the raw light curves from MAST and producing cleaned light
+curves.
 """
-from __future__ import absolute_import, print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from astropy.io import fits
 from astropy.time import Time
@@ -241,7 +243,8 @@ class LightCurve(object):
         if rename is not None:
             self.name = rename
 
-    def mask_out_of_transit(self, params, oot_duration_fraction=0.25, flip=False):
+    def mask_out_of_transit(self, params, oot_duration_fraction=0.25,
+                            flip=False):
         """
         Mask out the out-of-transit light curve based on transit parameters
         """

@@ -1,4 +1,7 @@
 
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 from friedrich.analysis import MCMCResults
 from friedrich.lightcurve import hat11_params_morris
 import matplotlib.pyplot as plt
