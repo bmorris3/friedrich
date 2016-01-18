@@ -1,5 +1,6 @@
+# Licensed under the MIT License - see LICENSE.rst
 """
-Tools for taking the raw light curves from MAST and producing cleaned light
+Methods for taking the raw light curves from MAST and producing cleaned light
 curves.
 """
 from __future__ import (absolute_import, division, print_function,
@@ -35,18 +36,18 @@ def kepler17_params_db():
     omega = np.degrees(np.arctan2(sqrt_e_sinw, sqrt_e_cosw))
 
     params = batman.TransitParams()
-    params.t0 = 2455185.678035           # time of inferior conjunction
-    params.per = 1.4857108               # orbital period
-    params.rp = 0.13031          # planet radius (in units of stellar radii)
-    b = 0.268                        # impact parameter
-    dur = 0.09485                        # transit duration
-    params.inc = 87.2                # orbital inclination (in degrees)
+    params.t0 = 2455185.678035     # time of inferior conjunction
+    params.per = 1.4857108         # orbital period
+    params.rp = 0.13031            # planet radius (in units of stellar radii)
+    b = 0.268                      # impact parameter
+    dur = 0.09485                  # transit duration
+    params.inc = 87.2              # orbital inclination (in degrees)
 
-    params.ecc = eccentricity                      # eccentricity
-    params.w = omega                       # longitude of periastron (in degrees)
-    params.a = 5.50                 # semi-major axis (in units of stellar radii)
-    params.u = [0.405, 0.262]                # limb darkening coefficients
-    params.limb_dark = "quadratic"       # limb darkening model
+    params.ecc = eccentricity      # eccentricity
+    params.w = omega               # longitude of periastron (in degrees)
+    params.a = 5.50                # semi-major axis (in units of stellar radii)
+    params.u = [0.405, 0.262]      # limb darkening coefficients
+    params.limb_dark = "quadratic" # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
@@ -71,18 +72,18 @@ def hat11_params_morris():
     omega = np.degrees(np.arctan2(esinw, ecosw))
 
     params = batman.TransitParams()
-    params.t0 = 2454605.89159720           # time of inferior conjunction
-    params.per = 4.88780233               # orbital period
-    params.rp = 0.00343**0.5          # planet radius (in units of stellar radii)
-    b = 0.127                       # impact parameter
-    dur = 0.0982                        # transit duration
-    params.inc = 89.4234790468                # orbital inclination (in degrees)
+    params.t0 = 2454605.89159720   # time of inferior conjunction
+    params.per = 4.88780233        # orbital period
+    params.rp = 0.00343**0.5       # planet radius (in units of stellar radii)
+    b = 0.127                      # impact parameter
+    dur = 0.0982                   # transit duration
+    params.inc = 89.4234790468     # orbital inclination (in degrees)
 
-    params.ecc = eccentricity                      # eccentricity
-    params.w = omega                       # longitude of periastron (in degrees)
-    params.a = 14.7663717                # semi-major axis (in units of stellar radii)
-    params.u = [0.5636, 0.1502]                # limb darkening coefficients
-    params.limb_dark = "quadratic"       # limb darkening model
+    params.ecc = eccentricity      # eccentricity
+    params.w = omega               # longitude of periastron (in degrees)
+    params.a = 14.7663717          # semi-major axis (in units of stellar radii)
+    params.u = [0.5636, 0.1502]    # limb darkening coefficients
+    params.limb_dark = "quadratic" # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
@@ -120,7 +121,8 @@ class LightCurve(object):
     """
     Container object for light curves.
     """
-    def __init__(self, times=None, fluxes=None, errors=None, quarters=None, name=None):
+    def __init__(self, times=None, fluxes=None, errors=None, quarters=None,
+                 name=None):
         """
         Parameters
         ----------
@@ -216,13 +218,15 @@ class LightCurve(object):
             if not os.path.exists(output_path):
                 os.mkdir(output_path)
                 for attr in ['times_jd', 'fluxes', 'errors', 'quarters']:
-                    np.savetxt(os.path.join(path, dirname, '{0}.txt'.format(attr)),
-                            getattr(self, attr))
+                    np.savetxt(os.path.join(path, dirname,
+                                            '{0}.txt'.format(attr)),
+                               getattr(self, attr))
 
         else:
             if not os.path.exists(output_path) or overwrite:
                 attrs = ['times_jd', 'fluxes', 'errors']
-                output_array = np.zeros((len(self.fluxes), len(attrs)), dtype=float)
+                output_array = np.zeros((len(self.fluxes), len(attrs)),
+                                        dtype=float)
                 for i, attr in enumerate(attrs):
                     output_array[:, i] = getattr(self, attr)
                 np.savetxt(os.path.join(path, dirname+'.txt'), output_array)
@@ -258,7 +262,8 @@ class LightCurve(object):
             quarter.append(len(data['TIME'])*[header['QUARTER']])
 
         times, fluxes, errors, quarter = [np.concatenate(i)
-                                          for i in [times, fluxes, errors, quarter]]
+                                          for i in [times, fluxes,
+                                                    errors, quarter]]
 
         mask_nans = np.zeros_like(fluxes).astype(bool)
         for attr in [times, fluxes, errors]:
@@ -572,7 +577,8 @@ class TransitLightCurve(LightCurve):
             Show diagnostic plots.
         """
 
-        linear_baseline, near_transit = self.fit_linear_baseline(params, cadence=cadence,
+        linear_baseline, near_transit = self.fit_linear_baseline(params,
+                                                                 cadence=cadence,
                                                                  return_near_transit=True)
         linear_baseline_fit = np.polyval(linear_baseline, self.times.jd)
         self.fluxes =  self.fluxes/linear_baseline_fit
@@ -582,7 +588,6 @@ class TransitLightCurve(LightCurve):
             fig, ax = plt.subplots(1, 2, figsize=(15,6))
             ax[0].axhline(1, ls='--', color='k')
             ax[0].plot(self.times.jd, self.fluxes, 'o')
-            #ax[0].plot(self.times.jd[near_transit], self.fluxes[near_transit], 'ro')
             ax[0].set_title('before trend removal')
 
             ax[1].set_title('after trend removal')
@@ -608,6 +613,7 @@ class TransitLightCurve(LightCurve):
         else:
             name = path
         return cls(times, fluxes, errors, quarters=quarters, name=name)
+
 
 def concatenate_transit_light_curves(light_curve_list, name=None):
     """
@@ -635,8 +641,9 @@ def concatenate_transit_light_curves(light_curve_list, name=None):
         errors.append(light_curve.errors)
         quarters.append(light_curve.quarters)
     times, fluxes, errors, quarters = [np.concatenate(i)
-                                       for i in [times, fluxes, errors, quarters]]
+                                       for i in [times, fluxes,
+                                                 errors, quarters]]
 
     times = Time(times, format='jd')
     return TransitLightCurve(times=times, fluxes=fluxes, errors=errors,
-                      quarters=quarters, name=name)
+                             quarters=quarters, name=name)

@@ -1,4 +1,7 @@
 # Licensed under the MIT License - see LICENSE.rst
+"""
+Launch a batch of hyak runs
+"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -68,7 +71,8 @@ echo "== END DEBUGGING INFORMATION  ========================"
 ## RUN your specific applications/scripts/code here
 ## --------------------------------------------------------
 
-## CHANGE directory to where job was submitted (careful, PBS defaults to user home directory)
+## CHANGE directory to where job was submitted
+## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
 python {run_script} {transit_number}
@@ -100,6 +104,3 @@ if __name__ == '__main__':
             f.write(submit_script)
 
         os.system('qsub {0}'.format(submit_script_path))
-
-## PBS -W group_list=hyak-stf
-#PBS -q bf

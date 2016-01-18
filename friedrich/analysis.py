@@ -1,4 +1,7 @@
-
+# Licensed under the MIT License - see LICENSE.rst
+"""
+Methods for analyzing results from `friedrich.fitting.run_emcee_seeded`.
+"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .fitting import spotted_transit_model, spotted_transit_model_individuals
@@ -10,8 +13,17 @@ from corner import corner
 
 
 class MCMCResults(object):
+    """
+    Visualize results from `friedrich.fitting.run_emcee_seeded`
+    """
     def __init__(self, archive_path):
-
+        """
+        Parameters
+        ----------
+        archive_path : str
+            Path to HDF5 archive written by
+            `friedrich.storage.create_results_archive`
+        """
         results = read_results_archive(archive_path)
         self.lnprob, self.best_params, self.chains, lc_matrix = results
 
@@ -20,6 +32,9 @@ class MCMCResults(object):
                                     errors=lc_matrix[2, :])
 
     def plot_lnprob(self):
+        """
+        Plot the log-probability of the chains as a function of step number.
+        """
         plt.figure()
         plt.title('$\log \,p$')
         plt.plot(self.lnprob)
@@ -27,6 +42,17 @@ class MCMCResults(object):
         plt.ylabel('$\log \,p$')
 
     def plot_corner(self, skip_every=100):
+        """
+        Make a corner plot using `~corner.corner`. Rather than plotting all steps
+        of the chain, skip some of the points.
+
+        Parameters
+        ----------
+        skip_every : int (optional)
+            Skip every `skip_every` steps when making the corner plot. Default
+            is 100.
+
+        """
         labels = ['depth']
         for i in range(self.chains.shape[0]):
             labels.extend(['$a_{0}$'.format(i), '$t_{{0,{0}}}$'.format(i),
@@ -34,6 +60,15 @@ class MCMCResults(object):
         corner(self.chains[::skip_every, :], labels=labels)
 
     def plot_max_lnp_lc(self, transit_params):
+        """
+        Plot the maximum likelihood transit+spots model over the data.
+
+        Parameters
+        ----------
+        transit_params : `~batman.TransitParams`
+            Transit light curve parameters
+
+        """
         model = spotted_transit_model(self.best_params, self.lc.times.jd,
                                       transit_params)
         individual_models = spotted_transit_model_individuals(self.best_params,
