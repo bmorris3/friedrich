@@ -18,13 +18,16 @@ from scipy import optimize
 
 def kepler17_params_db():
     """
-    Assumed transit parameters for Kepler-17 from exoplanets.org
+    Assumed transit parameters for Kepler-17 from exoplanets.org [1]_
+    which are largely from Desert et al. 2011 [2]_
 
-    http://exoplanets.org/detail/Kepler-17_b ,
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for Kepler-17
 
-    which are largely from Desert et al. 2011:
-
-    http://adsabs.harvard.edu/abs/2011ApJS..197...14D
+    .. [1]  http://exoplanets.org/detail/Kepler-17_b
+    .. [2]  http://adsabs.harvard.edu/abs/2011ApJS..197...14D
     """
     sqrt_e_cosw = 0.008
     sqrt_e_sinw = -0.084
@@ -52,10 +55,18 @@ def kepler17_params_db():
 
 def hat11_params_morris():
     """
-    Parameters from Brett
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
     """
-    ecosw = 0.261  # Winn et al. 2011
-    esinw = 0.085  # Winn et al. 2011
+    ecosw = 0.261  # Winn et al. 2010
+    esinw = 0.085  # Winn et al. 2010
     eccentricity = np.sqrt(ecosw**2 + esinw**2)
     omega = np.degrees(np.arctan2(esinw, ecosw))
 
@@ -78,27 +89,56 @@ def hat11_params_morris():
     return params
 
 
-def generate_lc_depth(times, depth, init_params):
+def generate_lc_depth(times, depth, transit_params):
+    """
+    Generate a model transit light curve.
+
+    Parameters
+    ----------
+    times : `~numpy.ndarray`
+        Times in JD
+    depth : float
+        Set depth independently from the setting in `transit_params`
+    transit_params : `~batman.TransitParams`
+        Transit light curve parameters
+
+    Returns
+    -------
+
+    """
     exp_time = (1*u.min).to(u.day).value
 
-    init_params.rp = np.sqrt(depth)
+    transit_params.rp = np.sqrt(depth)
 
-    m = batman.TransitModel(init_params, times, supersample_factor=7,
+    m = batman.TransitModel(transit_params, times, supersample_factor=7,
                             exp_time=exp_time)
-    model_flux = m.light_curve(init_params)
+    model_flux = m.light_curve(transit_params)
     return model_flux
 
 
 class LightCurve(object):
     """
-    Container object for light curves
+    Container object for light curves.
     """
     def __init__(self, times=None, fluxes=None, errors=None, quarters=None, name=None):
-
-        #if len(times) < 1:
+        """
+        Parameters
+        ----------
+        times : `~numpy.ndarray`
+            Times in JD
+        fluxes : `~numpy.ndarray`
+            Fluxes (normalized or not)
+        errors : `~numpy.ndarray`
+            Uncertainties on the fluxes
+        quarters : `~numpy.ndarray` (optional)
+            Kepler Quarter for each flux
+        name : str
+            Name this light curve (optional)
+        """
+        # if len(times) < 1:
         #    raise ValueError("Input `times` have no length.")
 
-        if (isinstance(times[0], Time) and isinstance(times, np.ndarray)):
+        if isinstance(times[0], Time) and isinstance(times, np.ndarray):
             times = Time(times)
         elif not isinstance(times, Time):
             times = Time(times, format='jd')
@@ -113,10 +153,26 @@ class LightCurve(object):
         self.quarters = quarters
         self.name = name
 
-    def plot(self, params, ax=None, quarter=None, show=True, phase=False,
-             plot_kwargs={'color':'b', 'marker':'o', 'lw':0}):
+    def plot(self, transit_params=None, ax=None, quarter=None, show=True,
+             phase=False, plot_kwargs={'color':'b', 'marker':'o', 'lw':0}):
         """
-        Plot light curve
+        Plot light curve.
+
+        Parameters
+        ----------
+        transit_params : `~batman.TransitParams` (optional)
+            Transit light curve parameters. Required if `phase` is `True`.
+        ax : `~matplotlib.axes.Axes` (optional)
+            Axis to make plot on top of
+        quarter : float (optional)
+            Plot only this Kepler quarter
+        show : bool
+            If `True`, call `matplotlib.pyplot.show` after plot is made
+        phase : bool
+            If `True`, map times in JD to orbital phases, which requires
+            that `transit_params` be input also.
+        plot_kwargs : dict
+            Keyword arguments to pass to `~matplotlib` calls.
         """
         if quarter is not None:
             if hasattr(quarter, '__len__'):
@@ -132,7 +188,7 @@ class LightCurve(object):
             ax = plt.gca()
 
         if phase:
-            x = (self.times.jd - params.t0)/params.per % 1
+            x = (self.times.jd - transit_params.t0)/transit_params.per % 1
             x[x > 0.5] -= 1
         else:
             x = self.times.jd
@@ -174,7 +230,19 @@ class LightCurve(object):
     @classmethod
     def from_raw_fits(cls, fits_paths, name=None):
         """
-        Load FITS files from MAST into the LightCurve object
+        Load FITS files downloaded from MAST into the `LightCurve` object.
+
+        Parameters
+        ----------
+        fits_paths : list
+            List of paths to FITS files to read in
+        name : str (optional)
+            Name of light curve
+
+        Returns
+        -------
+        lc : `LightCurve`
+            The light curve for the data in the fits files.
         """
         fluxes = []
         errors = []
@@ -221,9 +289,20 @@ class LightCurve(object):
 
         return cls(times, fluxes, errors, quarters=quarters, name=name)
 
-    def normalize_each_quarter(self, rename=None, polynomial_order=2, plots=False):
+    def normalize_each_quarter(self, rename=None, polynomial_order=2,
+                               plots=False):
         """
-        Use 2nd order polynomial fit to each quarter to normalize the data
+        Use polynomial fit to each quarter to normalize the data.
+
+        Parameters
+        ----------
+        rename : str (optional)
+            New name of the light curve after normalization
+        polynomial_order : int (optional)
+            Order of polynomial to fit to the out-of-transit fluxes. Default
+            is 2.
+        plots : bool (optional)
+            Show diagnostic plots after normalization.
         """
         quarter_inds = list(set(self.quarters))
         quarter_masks = [quarter == self.quarters for quarter in quarter_inds]
@@ -247,6 +326,22 @@ class LightCurve(object):
                             flip=False):
         """
         Mask out the out-of-transit light curve based on transit parameters
+
+        Parameters
+        ----------
+        params : `~batman.TransitParams`
+            Transit light curve parameters. Requires that `params.duration`
+            is defined.
+        oot_duration_fraction : float (optional)
+            Fluxes from what fraction of a transit duration of the
+            out-of-transit light curve should be included in the mask?
+        flip : bool (optional)
+            If `True`, mask in-transit rather than out-of-transit.
+
+        Returns
+        -------
+        d : dict
+            Inputs for a new `LightCurve` object with the mask applied.
         """
         # Fraction of one duration to capture out of transit
 
@@ -262,14 +357,44 @@ class LightCurve(object):
                     quarters=self.quarters[near_transit][sort_by_time])
 
     def mask_in_transit(self, params, oot_duration_fraction=0.25):
-        return self.mask_out_of_transit(params, oot_duration_fraction=oot_duration_fraction,
-                                        flip=True)
+        """
+        Mask out the in-transit light curve based on transit parameters
+
+        Parameters
+        ----------
+        params : `~batman.TransitParams`
+            Transit light curve parameters. Requires that `params.duration`
+            is defined.
+        oot_duration_fraction : float (optional)
+            Fluxes from what fraction of a transit duration of the
+            out-of-transit light curve should be included in the mask?
+
+        Returns
+        -------
+        d : dict
+            Inputs for a new `LightCurve` object with the mask applied.
+        """
+        return self.mask_out_of_transit(params, flip=True,
+                                        oot_duration_fraction=oot_duration_fraction)
 
     def get_transit_light_curves(self, params, plots=False):
         """
-        For a light curve with transits only (returned by get_only_transits),
-        split up the transits into their own light curves, return a list of
-        `TransitLightCurve` objects
+        For a light curve with transits only (i.e. like one returned by
+        `LightCurve.mask_out_of_transit`), split up the transits into their
+        own light curves, return a list of `TransitLightCurve` objects.
+
+        Parameters
+        ----------
+        params : `~batman.TransitParams`
+            Transit light curve parameters
+
+        plots : bool
+            Make diagnostic plots.
+
+        Returns
+        -------
+        transit_light_curves : list
+            List of `TransitLightCurve` objects
         """
         time_diffs = np.diff(sorted(self.times.jd))
         diff_between_transits = params.per/2.
@@ -304,9 +429,31 @@ class LightCurve(object):
         return transit_light_curves
 
     def get_available_quarters(self):
+        """
+        Get which quarters are available in this `LightCurve`
+
+        Returns
+        -------
+        qs : list
+            List of unique quarters available.
+        """
         return list(set(self.quarters))
 
     def get_quarter(self, quarter):
+        """
+        Get a copy of the data from within `LightCurve` during one Kepler
+        quarter.
+
+        Parameters
+        ----------
+        quarter : int
+            Kepler Quarter
+
+        Returns
+        -------
+        lc : `LightCurve`
+            Light curve from one Kepler Quarter
+        """
         this_quarter = self.quarters == quarter
         return LightCurve(times=self.times[this_quarter],
                           fluxes=self.fluxes[this_quarter],
@@ -316,39 +463,38 @@ class LightCurve(object):
 
     @property
     def times_jd(self):
+        """
+        Get the times in this light curve in JD.
+
+        Returns
+        -------
+        t_jd : `~numpy.ndarray`
+            Julian dates.
+        """
         return self.times.jd
-
-    def save_split_at_stellar_rotations(self, path, stellar_rotation_period,
-                                        overwrite=False):
-        dirname = self.name
-        output_path = os.path.join(path, dirname)
-        self.times = Time(self.times)
-
-        if os.path.exists(output_path) and overwrite:
-            shutil.rmtree(output_path)
-
-        stellar_rotation_phase = ((self.times.jd - self.times.jd[0])*u.day %
-                                   stellar_rotation_period ) / stellar_rotation_period
-        phase_wraps = np.argwhere(stellar_rotation_phase[:-1] >
-                                  stellar_rotation_phase[1:])
-
-        split_times = np.split(self.times.jd, phase_wraps)
-        split_fluxes = np.split(self.fluxes, phase_wraps)
-        split_errors = np.split(self.errors, phase_wraps)
-        split_quarters = np.split(self.quarters, phase_wraps)
-
-        header = "JD Flux Uncertainty Quarter"
-        for i, t, f, e, q in zip(range(len(split_times)), split_times,
-                                 split_fluxes, split_errors, split_quarters):
-            np.savetxt(os.path.join(output_path, 'rotation{:02d}.txt'.format(i)),
-                       np.vstack([t, f, e, q]).T, header=header)
 
 
 class TransitLightCurve(LightCurve):
     """
-    Container for a single transit light curve
+    Container for a single transit light curve. Subclass of `LightCurve`.
     """
-    def __init__(self, times=None, fluxes=None, errors=None, quarters=None, name=None):
+    def __init__(self, times=None, fluxes=None, errors=None, quarters=None,
+                 name=None):
+        """
+        Parameters
+        ----------
+        times : `~numpy.ndarray`
+            Times in JD
+        fluxes : `~numpy.ndarray`
+            Fluxes (normalized or not)
+        errors : `~numpy.ndarray`
+            Uncertainties on the fluxes
+        quarters : `~numpy.ndarray` (optional)
+            Kepler Quarter for each flux
+        name : str
+            Name this light curve (optional)
+        """
+
         if isinstance(times[0], Time) and isinstance(times, np.ndarray):
             times = Time(times)
         elif not isinstance(times, Time):
@@ -360,17 +506,36 @@ class TransitLightCurve(LightCurve):
         self.name = name
         self.rescaled = False
 
-    def fit_linear_baseline(self, params, cadence=1*u.min, return_near_transit=False,
-                            plots=False):
+    def fit_linear_baseline(self, params, cadence=1*u.min,
+                            return_near_transit=False, plots=False):
         """
         Find OOT portions of transit light curve using similar method to
-        `LightCurve.mask_out_of_transit`, fit linear baseline to OOT
+        `LightCurve.mask_out_of_transit`, fit linear baseline to OOT.
+
+        Parameters
+        ----------
+        params : `~batman.TransitParams`
+            Transit light curve parameters. Requires that `params.duration`
+            is defined.
+        cadence : `~astropy.units.Quantity` (optional)
+            Length of the exposure time for each flux. Default is 1 min.
+        return_near_transit : bool (optional)
+            Return the mask for times in-transit.
+
+        Returns
+        -------
+        linear_baseline : `numpy.ndarray`
+            Baseline trend of out-of-transit fluxes
+        near_transit : `numpy.ndarray` (optional)
+            The mask for times in-transit.
         """
         cadence_buffer = cadence.to(u.day).value
         get_oot_duration_fraction = 0
         phased = (self.times.jd - params.t0) % params.per
-        near_transit = ((phased < params.duration*(0.5 + get_oot_duration_fraction) + cadence_buffer) |
-                        (phased > params.per - params.duration*(0.5 + get_oot_duration_fraction) - cadence_buffer))
+        near_transit = ((phased < params.duration *
+                         (0.5 + get_oot_duration_fraction) + cadence_buffer) |
+                        (phased > params.per - params.duration *
+                         (0.5 + get_oot_duration_fraction) - cadence_buffer))
 
         # Remove linear baseline trend
         order = 1
@@ -395,6 +560,16 @@ class TransitLightCurve(LightCurve):
         Find OOT portions of transit light curve using similar method to
         `LightCurve.mask_out_of_transit`, fit linear baseline to OOT,
         divide whole light curve by that fit.
+
+        Parameters
+        ----------
+        params : `~batman.TransitParams`
+            Transit light curve parameters. Requires that `params.duration`
+            is defined.
+        cadence : `~astropy.units.Quantity` (optional)
+            Length of the exposure time for each flux. Default is 1 min.
+        plots : bool (optional)
+            Show diagnostic plots.
         """
 
         linear_baseline, near_transit = self.fit_linear_baseline(params, cadence=cadence,
@@ -422,41 +597,6 @@ class TransitLightCurve(LightCurve):
             self.errors *= scaling_vector
             self.rescaled = True
 
-    def fiducial_transit_fit(self, params, plots=False,
-                             model=generate_lc_depth):
-        # Determine cadence:
-        # typical_time_diff = np.median(np.diff(self.times.jd))*u.day
-        # exp_long = 30*u.min
-        # exp_short = 1*u.min
-        # exp_time = (exp_long if np.abs(typical_time_diff - exp_long) < 1*u.min
-        #             else exp_short).to(u.day).value
-
-        # [t0, depth, dur, b]
-        init_depth = params.rp**2
-        initial_parameters = [init_depth]
-
-        def minimize_this(p, times, fluxes, errors):
-            return np.sum(((model(times, *p) - fluxes)/errors)**2)
-        fit_result = optimize.fmin(minimize_this, initial_parameters,
-                                   args=(self.times.jd, self.fluxes, self.errors),
-                                   disp=False)
-        p = fit_result#[0]#fit_result[0]
-        init_model = model(self.times.jd, *initial_parameters)
-        model_flux = model(self.times.jd, *p)
-
-        if plots:
-            fig, ax = plt.subplots(2, 1, figsize=(8, 12), sharex=True)
-            #ax[0].plot(self.times.jd, init_model, 'g')
-            ax[0].errorbar(self.times.jd, self.fluxes, self.errors, fmt='.', color='k')
-            ax[0].plot(self.times.jd, model_flux, 'r')
-            ax[0].set(ylabel='Flux')
-            ax[1].errorbar(self.times.jd, self.fluxes - model_flux, fmt='.', color='k')
-            ax[1].axhline(0, color='r')
-            #plt.show()
-
-        chi2 = np.sum((self.fluxes - model_flux)**2/self.errors**2)/(len(self.fluxes))
-        return p, chi2
-
     @classmethod
     def from_dir(cls, path):
         """Load light curve from numpy save files in ``path``"""
@@ -469,73 +609,21 @@ class TransitLightCurve(LightCurve):
             name = path
         return cls(times, fluxes, errors, quarters=quarters, name=name)
 
-def combine_short_and_long_cadence(short_cadence_transit_light_curves_list,
-                                   long_cadence_transit_light_curves_list,
-                                   long_cadence_light_curve, name=None):
-    """
-    Find the linear baseline in the out of transit portions of the long cadence
-    light curves in ``long_cadence_transit_light_curves_list``. Scale each
-    short cadence light curve by that scaling factor.
-
-    Cut out all transits from the ``long_cadence_light_curve``, and leave
-    enough time before/after the first short-cadence points near transit to
-    ensure no overlapping exposure times.
-
-    Insert the normalized short cadence light curves from
-    ``short_cadence_light_curve_list`` into the time series.
-    """
-    # Find linear baseline near transits in long cadence
-    linear_baseline_params = [transit.fit_linear_baseline(cadence=30*u.min)
-                              for transit in long_cadence_transit_light_curves_list]
-
-    # Find the corresponding short cadence transit for each long cadence baseline
-    # fit, renormalize that short cadence transit accordingly
-    scaled_short_transits = []
-    for short_transit in short_cadence_transit_light_curves_list:
-        for long_transit, baseline_params in zip(long_cadence_transit_light_curves_list, linear_baseline_params):
-            if abs(long_transit.times.jd.mean() - short_transit.times.jd.mean()) < 0.1:
-                short_transit.scale_by_baseline(baseline_params)
-                scaled_short_transits.append(short_transit)
-
-    # Break out all times, fluxes, errors quarters, and weed out those from the
-    # long cadence light curve that overlap with the short cadence data
-    all_times = long_cadence_light_curve.times.jd
-    all_fluxes = long_cadence_light_curve.fluxes
-    all_errors = long_cadence_light_curve.errors
-    all_quarters = long_cadence_light_curve.quarters
-
-    remove_mask = np.zeros(len(all_times), dtype=bool)
-    short_cadence_exp_time = (30*u.min).to(u.day).value
-    for scaled_short_transit in scaled_short_transits:
-        min_t = scaled_short_transit.times.jd.min() - short_cadence_exp_time
-        max_t = scaled_short_transit.times.jd.max() + short_cadence_exp_time
-        overlapping_times = (all_times > min_t) & (all_times < max_t)
-        remove_mask |= overlapping_times
-
-    remove_indices = np.arange(len(all_times))[remove_mask]
-    all_times, all_fluxes, all_errors, all_quarters = [np.delete(arr, remove_indices)
-                                                       for arr in [all_times, all_fluxes, all_errors, all_quarters]]
-
-    # Insert the renormalized short cadence data into the pruned long cadence
-    # data, return as `LightCurve` object
-
-    all_times = np.concatenate([all_times] + [t.times.jd for t in scaled_short_transits])
-    all_fluxes = np.concatenate([all_fluxes] + [t.fluxes for t in scaled_short_transits])
-    all_errors = np.concatenate([all_errors] + [t.errors for t in scaled_short_transits])
-    all_quarters = np.concatenate([all_quarters] + [t.quarters for t in scaled_short_transits])
-
-    # Sort by times
-    time_sort = np.argsort(all_times)
-    all_times, all_fluxes, all_errors, all_quarters = [arr[time_sort]
-                                                       for arr in [all_times, all_fluxes, all_errors, all_quarters]]
-
-    return LightCurve(times=all_times, fluxes=all_fluxes, errors=all_errors,
-                      quarters=all_quarters, name=name)
-
-
 def concatenate_transit_light_curves(light_curve_list, name=None):
     """
-    Combine multiple transit light curves into one `TransitLightCurve` object
+    Combine multiple transit light curves into one `TransitLightCurve` object.
+
+    Parameters
+    ----------
+    light_curve_list : list
+        List of `TransitLightCurve` objects
+    name : str
+        Name of new light curve
+
+    Returns
+    -------
+    tlc : `TransitLightCurve`
+        Concatenated transit light curves
     """
     times = []
     fluxes = []
