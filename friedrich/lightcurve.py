@@ -14,7 +14,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import shutil
 import batman
-from scipy import optimize
 
 
 def kepler17_params_db():

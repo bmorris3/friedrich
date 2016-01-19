@@ -5,7 +5,6 @@ Methods for fitting transit light curves, spot occultations, or both, using
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from .storage import create_results_archive
 
 import numpy as np
 import emcee
@@ -505,6 +504,8 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
 
     print('Finished MCMC...')
     burnin_len = int(burnin*n_steps)
+
+    from .storage import create_results_archive
 
     create_results_archive(output_path, light_curve, sampler, burnin_len, ndim)
 
