@@ -75,7 +75,7 @@ def hat11_params_morris():
     params.t0 = 2454605.89159720   # time of inferior conjunction
     params.per = 4.88780233        # orbital period
     params.rp = 0.00343**0.5       # planet radius (in units of stellar radii)
-    b = 0.127                      # impact parameter
+    #b = 0.127                      # impact parameter
     dur = 0.0982                   # transit duration
     params.inc = 89.4234790468     # orbital inclination (in degrees)
 
