@@ -167,14 +167,20 @@ def R_x(x, y, z, alpha):
 
     Parameters
     ----------
-    x
-    y
-    z
-    alpha
+    x : `np.ndarray` with dims (1, N)
+    y : `np.ndarray` with dims (1, N)
+    z : `np.ndarray` with dims (1, N)
+    alpha : float
+        angle [radians] to rotate about the `x` axis counterclockwise
 
     Returns
     -------
-
+    x2 : `np.ndarray` with dims (1, N)
+        Rotated x positions
+    y2 : `np.ndarray` with dims (1, N)
+        Rotated y positions
+    z2 : `np.ndarray` with dims (1, N)
+        Rotated z positions
     """
     original_shape = x.shape
     xyz = np.vstack([x.ravel(), y.ravel(), z.ravel()])
