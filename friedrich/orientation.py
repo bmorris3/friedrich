@@ -4,6 +4,9 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 import matplotlib.pyplot as plt
 import batman
+from astropy.coordinates import SphericalRepresentation, CartesianRepresentation
+import astropy.units as u
+
 
 def impact_parameter(transit_params):
     """
@@ -89,9 +92,9 @@ def planet_position_f_to_xy(true_anomaly, transit_params):
 
     # Mask out planet positions when behind star
     planet_between_star_and_observer = Z > 0
-    planet_behind_star = (X**2 + Y**2 < 1) & -planet_between_star_and_observer
+    planet_behind_star = (X**2 + Y**2 < 1) & ~planet_between_star_and_observer
 
-    return X[-planet_behind_star], Y[-planet_behind_star]
+    return X[~planet_behind_star], Y[~planet_behind_star]
 
 
 def time_to_f(times, transit_params):
@@ -157,6 +160,31 @@ def unit_circle(theta):
     y = np.sin(theta)
     return x, y
 
+
+def R_x(x, y, z, alpha):
+    """
+    Rotation matrix for rotation about the x axis
+
+    Parameters
+    ----------
+    x
+    y
+    z
+    alpha
+
+    Returns
+    -------
+
+    """
+    xyz = np.vstack([x, y, z])
+    r_x = np.array([[1, 0, 0],
+                    [0, np.cos(alpha), np.sin(alpha)],
+                    [0, -np.sin(alpha), np.cos(alpha)]])
+    new_xyz = np.dot(r_x, xyz)
+    x2, y2, z2 = np.vsplit(new_xyz, 3)
+    return x2[0], y2[0], z2[0]
+
+
 if __name__ == '__main__':
     from lightcurve import hat11_params_morris
     from fitting import generate_lc
@@ -193,4 +221,48 @@ if __name__ == '__main__':
     ax[1].set(xlim=[times.min(), times.max()], ylim=[model_lc.min()*0.99,
                                                      model_lc.max()*1.01],
               xlabel='Time [JD]', ylabel='Flux')
+
+
+    # Plot gridlines
+    n_gridlines = 9
+    print("lat grid spacing: {0} deg".format(180./(n_gridlines-1)))
+    n_points = 35
+    pi = np.pi
+
+    latitude_lines = SphericalRepresentation(np.linspace(0, 2*pi, n_points)[:, np.newaxis]*u.rad,
+                                             np.linspace(-pi/2, pi/2, n_gridlines).T*u.rad,
+                                             np.ones((n_points, 1))
+                                             ).to_cartesian()
+
+    longitude_lines = SphericalRepresentation(np.linspace(0, 2*pi, n_gridlines)[:, np.newaxis]*u.rad,
+                                              np.linspace(-pi/2, pi/2, n_points).T*u.rad,
+                                              np.ones((n_gridlines, 1))
+                                              ).to_cartesian()
+    # Make into long vectors
+    lat_x = latitude_lines.x.value.reshape((1, n_points*n_gridlines))
+    lat_y = latitude_lines.y.value.reshape((1, n_points*n_gridlines))
+    lat_z = latitude_lines.z.value.reshape((1, n_points*n_gridlines))
+    lon_x = longitude_lines.x.value.reshape((1, n_points*n_gridlines))
+    lon_y = longitude_lines.y.value.reshape((1, n_points*n_gridlines))
+    lon_z = longitude_lines.z.value.reshape((1, n_points*n_gridlines))
+
+    lat_x, lat_y, lat_z = R_x(lat_x, lat_y, lat_z, -np.pi/2)
+    lon_x, lon_y, lon_z = R_x(lon_x, lon_y, lon_z, -np.pi/2)
+
+    # Reshape latitudes out of the long vectors for plotting
+    lat_x = lat_x.reshape((n_points, n_gridlines))
+    lat_y = lat_y.reshape((n_points, n_gridlines))
+    lat_z = lat_z.reshape((n_points, n_gridlines))
+
+    ax[0].plot(lat_x, lat_y, ls=':', color='silver')
+    ax[0].plot(lon_x, lon_y, ls=':', color='silver')
+
+
+    # for i in range(latitude_lines.shape[1]):
+    #     ax[0].plot(lat, latitude_lines.y[:, i],
+    #                 ls=':', color='silver')
+    #
+    # for i in range(longitude_lines.shape[0]):
+    #     ax[0].plot(longitude_lines.x[i, :], longitude_lines.y[i, :],
+    #                ls=':', color='silver')
     plt.show()
