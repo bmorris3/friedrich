@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 import matplotlib.pyplot as plt
 import batman
-from astropy.coordinates import SphericalRepresentation, CartesianRepresentation
+from astropy.coordinates import SphericalRepresentation
 import astropy.units as u
 
 
@@ -176,13 +176,17 @@ def R_x(x, y, z, alpha):
     -------
 
     """
-    xyz = np.vstack([x, y, z])
+    original_shape = x.shape
+    xyz = np.vstack([x.ravel(), y.ravel(), z.ravel()])
     r_x = np.array([[1, 0, 0],
                     [0, np.cos(alpha), np.sin(alpha)],
                     [0, -np.sin(alpha), np.cos(alpha)]])
     new_xyz = np.dot(r_x, xyz)
     x2, y2, z2 = np.vsplit(new_xyz, 3)
-    return x2[0], y2[0], z2[0]
+    x2.resize(original_shape)
+    y2.resize(original_shape)
+    z2.resize(original_shape)
+    return x2, y2, z2
 
 
 if __name__ == '__main__':
@@ -238,31 +242,18 @@ if __name__ == '__main__':
                                               np.linspace(-pi/2, pi/2, n_points).T*u.rad,
                                               np.ones((n_gridlines, 1))
                                               ).to_cartesian()
-    # Make into long vectors
-    lat_x = latitude_lines.x.value.reshape((1, n_points*n_gridlines))
-    lat_y = latitude_lines.y.value.reshape((1, n_points*n_gridlines))
-    lat_z = latitude_lines.z.value.reshape((1, n_points*n_gridlines))
-    lon_x = longitude_lines.x.value.reshape((1, n_points*n_gridlines))
-    lon_y = longitude_lines.y.value.reshape((1, n_points*n_gridlines))
-    lon_z = longitude_lines.z.value.reshape((1, n_points*n_gridlines))
+    # Get arrays from quantity
+    lat_x = latitude_lines.x.value
+    lat_y = latitude_lines.y.value
+    lat_z = latitude_lines.z.value
+    lon_x = longitude_lines.x.value
+    lon_y = longitude_lines.y.value
+    lon_z = longitude_lines.z.value
 
     lat_x, lat_y, lat_z = R_x(lat_x, lat_y, lat_z, -np.pi/2)
     lon_x, lon_y, lon_z = R_x(lon_x, lon_y, lon_z, -np.pi/2)
 
-    # Reshape latitudes out of the long vectors for plotting
-    lat_x = lat_x.reshape((n_points, n_gridlines))
-    lat_y = lat_y.reshape((n_points, n_gridlines))
-    lat_z = lat_z.reshape((n_points, n_gridlines))
-
     ax[0].plot(lat_x, lat_y, ls=':', color='silver')
-    ax[0].plot(lon_x, lon_y, ls=':', color='silver')
+    ax[0].plot(lon_x.T, lon_y.T, ls=':', color='silver')
 
-
-    # for i in range(latitude_lines.shape[1]):
-    #     ax[0].plot(lat, latitude_lines.y[:, i],
-    #                 ls=':', color='silver')
-    #
-    # for i in range(longitude_lines.shape[0]):
-    #     ax[0].plot(longitude_lines.x[i, :], longitude_lines.y[i, :],
-    #                ls=':', color='silver')
     plt.show()
