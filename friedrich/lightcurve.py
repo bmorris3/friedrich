@@ -79,13 +79,18 @@ def hat11_params_morris():
     params.inc = 89.4234790468     # orbital inclination (in degrees)
 
     params.ecc = eccentricity      # eccentricity
-    params.w = omega               # longitude of periastron (in degrees)
+    params.w = omega              # longitude of periastron (in degrees)
     params.a = 14.7663717          # semi-major axis (in units of stellar radii)
     params.u = [0.5636, 0.1502]    # limb darkening coefficients
     params.limb_dark = "quadratic" # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
+    params.lam = 106.0            # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 80.0     # Sanchis-Ojeda & Winn 2011 (soln 1)
+
+    params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
     return params
 
 
