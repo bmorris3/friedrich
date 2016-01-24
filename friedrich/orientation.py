@@ -244,8 +244,8 @@ def R_z(x, y, z, alpha=0):
     return x2, y2, z2
 
 
-def sky_cartesian_to_spherical_polar(X, Y, Z):
-    return R_z(*R_x(X, Y, Z, alpha=np.pi/2), alpha=np.pi/2)
+#def sky_cartesian_to_spherical_polar(X, Y, Z):
+#    return R_z(*R_x(X, Y, Z, alpha=np.pi/2), alpha=np.pi/2)
 
 
 def planet_pos_to_stellar_surf(X, Y, Z):
@@ -349,7 +349,7 @@ def plot_lat_lon_gridlines(axis, lat_lon, plot_x_axis, plot_y_axis, plot_color_a
     #[lat_lon_x, lat_lon_y, lat_lon_z] = lat_lon
 
     scale_color = ((lat_lon[plot_color_axis] - lat_lon[plot_color_axis].min()) /
-               lat_lon[plot_color_axis].ptp())
+                   lat_lon[plot_color_axis].ptp())
     colors = plt.cm.winter(scale_color.ravel())
     #ax[0, 0].plot(lat_x.ravel(), lat_y.ravel(), ls='-',  color=colors)
     #ax[0, 0].plot(lon_x.ravel(), lon_y.ravel(), ls='-',  color=colors)
@@ -370,7 +370,7 @@ def plot_lat_lon_gridlines(axis, lat_lon, plot_x_axis, plot_y_axis, plot_color_a
     axis.add_collection(lc)
 
 
-def get_lat_lon_grid(n_points):
+def get_lat_lon_grid(n_points, transit_params):
     #n_points = 31#11
     print("lat grid spacing: {0} deg".format(180./(n_points-1)))
     pi = np.pi
@@ -392,19 +392,27 @@ def get_lat_lon_grid(n_points):
     i_star = np.radians(transit_params.inc_stellar)    # i_s in Fabrycky & Winn (2009)
     lam_star = np.radians(transit_params.lam)          # lambda in Fabrycky & Winn (2009)
 
+    # lon_x, lon_y, lon_z = R_z(*R_x(lon_x, lon_y, lon_z,
+    #                                alpha=i_star - np.pi/2),
+    #                           alpha=lam_star)
+    # lat_x, lat_y, lat_z = R_z(*R_x(lat_x, lat_y, lat_z,
+    #                                alpha=i_star),
+    #                           alpha=lam_star)
+
     lon_x, lon_y, lon_z = R_z(*R_x(lon_x, lon_y, lon_z,
-                                  alpha=i_star + np.pi/2),
+                                   alpha=i_star),
                               alpha=lam_star)
     lat_x, lat_y, lat_z = R_z(*R_x(lat_x, lat_y, lat_z,
-                                  alpha=i_star + np.pi/2),
+                                   alpha=i_star),
                               alpha=lam_star)
+
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
 
 if __name__ == '__main__':
     from lightcurve import hat11_params_morris
     from fitting import generate_lc
     thetas = np.linspace(0, 2*np.pi, 10000)
-    transit_params = pysyzygy_example() # hat11_params_morris()
+    transit_params = hat11_params_morris()  # pysyzygy_example() #
     #transit_params.inc = 87.0
 
     times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + 0.07, 1000)
@@ -427,10 +435,8 @@ if __name__ == '__main__':
                                                         model_lc.max()*1.001],
                  xlabel='Time [JD]', ylabel='Flux')
 
-
     # Plot gridlines
-
-    [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31)
+    [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params)
 
     plot_lat_lon_gridlines(ax[0, 0], [lat_x, lat_y, lat_z],
                            plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
@@ -460,10 +466,10 @@ if __name__ == '__main__':
                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5])
 
     ax[0, 1].set(xlabel='$x / R_s$', ylabel='$-z / R_s$',
-                xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
+                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
 
     ax[1, 1].set(xlabel='$x / R_s$', ylabel='$z / R_s$',
-                xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom view")
+                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom view")
 
     ax[0, 0].set_aspect('equal')
 

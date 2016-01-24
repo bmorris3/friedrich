@@ -89,8 +89,8 @@ def hat11_params_morris():
     params.lam = 106.0            # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.inc_stellar = 80.0     # Sanchis-Ojeda & Winn 2011 (soln 1)
 
-    params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
-    params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
     return params
 
 
