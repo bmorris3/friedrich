@@ -302,6 +302,11 @@ def spherical_to_cartesian(r, theta, phi):
     return x, y, z
 
 
+def spherical_to_latlon(r, theta, phi):
+    latitude = 90 - np.degrees(phi)
+    longitude = np.degrees(theta)
+    return latitude, longitude
+
 def pysyzygy_example():
     """
     Example for comparison with pysyzygy [1]_
@@ -337,8 +342,8 @@ def pysyzygy_example():
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
-    params.lam = 106.0            # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.inc_stellar = 80.0     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.lam = 0.0            # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 0.0     # Sanchis-Ojeda & Winn 2011 (soln 1)
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
@@ -370,7 +375,34 @@ def plot_lat_lon_gridlines(axis, lat_lon, plot_x_axis, plot_y_axis, plot_color_a
     axis.add_collection(lc)
 
 
-def get_lat_lon_grid(n_points, transit_params):
+def project_planet_to_stellar_surface(x, y):
+    projected_z = np.sqrt(1 - x**2 - y**2)
+    return x, y, projected_z
+
+
+def observer_view_to_stellar_view(x, y, z, transit_params):
+    i_star = np.radians(transit_params.inc_stellar)
+    lam_star = np.radians(transit_params.lam)
+    x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=-i_star), alpha=-lam_star)
+    return x_p, y_p, z_p
+
+
+def get_lat_lon_grid(n_points, transit_params, transit_view=True):
+    """
+
+    Parameters
+    ----------
+    n_points
+    transit_params
+    transit_view : bool
+        If true, show star as viewed from positive Z axis (transit view), else
+        show star as viewed with its rotation axis in the +Z direction (standard
+        spherical polar coords)
+
+    Returns
+    -------
+
+    """
     #n_points = 31#11
     print("lat grid spacing: {0} deg".format(180./(n_points-1)))
     pi = np.pi
@@ -399,12 +431,13 @@ def get_lat_lon_grid(n_points, transit_params):
     #                                alpha=i_star),
     #                           alpha=lam_star)
 
-    lon_x, lon_y, lon_z = R_z(*R_x(lon_x, lon_y, lon_z,
-                                   alpha=i_star),
-                              alpha=lam_star)
-    lat_x, lat_y, lat_z = R_z(*R_x(lat_x, lat_y, lat_z,
-                                   alpha=i_star),
-                              alpha=lam_star)
+    if transit_view:
+        lon_x, lon_y, lon_z = R_z(*R_x(lon_x, lon_y, lon_z,
+                                       alpha=i_star),
+                                  alpha=lam_star)
+        lat_x, lat_y, lat_z = R_z(*R_x(lat_x, lat_y, lat_z,
+                                       alpha=i_star),
+                                  alpha=lam_star)
 
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
 
@@ -412,20 +445,24 @@ if __name__ == '__main__':
     from lightcurve import hat11_params_morris
     from fitting import generate_lc
     thetas = np.linspace(0, 2*np.pi, 10000)
-    transit_params = hat11_params_morris()  # pysyzygy_example() #
+    transit_params = hat11_params_morris() # pysyzygy_example()  #  #
     #transit_params.inc = 87.0
 
-    times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + 0.07, 1000)
+    times = np.linspace(transit_params.t0 - 0.07,
+                        transit_params.t0 + 0.07, 1000)
     #times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + transit_params.per, 100)
 
-    plot_pos_times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + 0.07, 20)
+    plot_pos_times = np.linspace(transit_params.t0 - 0.07,
+                                 transit_params.t0 + 0.07, 40)
 
     X, Y, Z = planet_position_cartesian(plot_pos_times, transit_params)
 
-    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+    fig, ax = plt.subplots(2, 3, figsize=(14, 10))
     ax[0, 0].plot(*unit_circle(thetas))
     ax[0, 1].plot(*unit_circle(thetas), 'b')
     ax[1, 1].plot(*unit_circle(thetas), 'b')
+    ax[0, 2].plot(*unit_circle(thetas), 'b')
+    ax[1, 2].plot(*unit_circle(thetas), 'b')
 
     model_lc = generate_lc(times, transit_params)
     ax[1, 0].plot(times, model_lc)
@@ -455,6 +492,24 @@ if __name__ == '__main__':
                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1,
                            flip_sign=-1)
 
+    [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params, transit_view=False)
+
+    plot_lat_lon_gridlines(ax[0, 2], [lat_x, lat_y, lat_z],
+                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
+                           #flip_sign=-1)
+    plot_lat_lon_gridlines(ax[0, 2], [lon_x, lon_y, lon_z],
+                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
+                           #flip_sign=-1)
+
+    plot_lat_lon_gridlines(ax[1, 2], [lat_x, lat_y, lat_z],
+                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
+                           #flip_sign=-1)
+    plot_lat_lon_gridlines(ax[1, 2], [lon_x, lon_y, lon_z],
+                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
+                          # flip_sign=-1)
+
+
+
     cmap = plt.cm.winter
     for i, x, y, z in zip(range(len(X)), X, Y, Z):
         circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
@@ -466,24 +521,45 @@ if __name__ == '__main__':
                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5])
 
     ax[0, 1].set(xlabel='$x / R_s$', ylabel='$-z / R_s$',
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
+                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top orbit view")
 
     ax[1, 1].set(xlabel='$x / R_s$', ylabel='$z / R_s$',
+                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom orbit view")
+
+    ax[0, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
+                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
+
+    ax[1, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom view")
 
     ax[0, 0].set_aspect('equal')
+    ax[0, 1].set_aspect('equal')
+    ax[0, 2].set_aspect('equal')
+    ax[1, 1].set_aspect('equal')
+    ax[1, 2].set_aspect('equal')
 
     # Plot projected onto stellar surface
-    spot_x = X
-    spot_y = Y
-    spot_z = np.sqrt(1 - X**2 - Y**2)
+    # spot_x = X
+    # spot_y = Y
+    # spot_z = np.sqrt(1 - X**2 - Y**2)
+    spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
 
-    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x, spot_y, spot_z)
-    print(np.degrees(spot_r), np.degrees(spot_theta), np.degrees(spot_phi))
 
     ax[0, 0].scatter(spot_x, spot_y, color='g')
     ax[0, 1].scatter(spot_x[spot_y > 0], -spot_z[spot_y > 0], color='g')
     ax[1, 1].scatter(spot_x[spot_y < 0], spot_z[spot_y < 0], color='g')
+
+    spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
+
+
+    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+    latitude, longitude = spherical_to_latlon(spot_r, spot_theta, spot_phi)
+    plt.figure()
+    plt.plot(latitude)
+    plt.plot(longitude)
+
+    ax[0, 2].scatter(-spot_z_s[spot_x_s > 0], spot_y_s[spot_x_s > 0], color='g')
+    ax[1, 2].scatter(-spot_z_s[spot_x_s < 0], spot_y_s[spot_x_s < 0], color='g')
 
     # Orbit view:
     # fig = plt.figure()
