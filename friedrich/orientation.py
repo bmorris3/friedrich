@@ -116,8 +116,12 @@ def true_anomaly(times, transit_params):
     Notes
     -----
     """
-    m = batman.TransitModel(transit_params, times)
-    f = m.get_true_anomaly()
+    sort = np.argsort(times)
+    unsort = np.argsort(sort)
+    times_sorted = times[sort]
+
+    m = batman.TransitModel(transit_params, times_sorted)
+    f = m.get_true_anomaly()[unsort]
     return f
 
 
@@ -356,8 +360,6 @@ def plot_lat_lon_gridlines(axis, lat_lon, plot_x_axis, plot_y_axis, plot_color_a
     scale_color = ((lat_lon[plot_color_axis] - lat_lon[plot_color_axis].min()) /
                    lat_lon[plot_color_axis].ptp())
     colors = plt.cm.winter(scale_color.ravel())
-    #ax[0, 0].plot(lat_x.ravel(), lat_y.ravel(), ls='-',  color=colors)
-    #ax[0, 0].plot(lon_x.ravel(), lon_y.ravel(), ls='-',  color=colors)
 
     from matplotlib.collections import LineCollection
     from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -383,7 +385,9 @@ def project_planet_to_stellar_surface(x, y):
 def observer_view_to_stellar_view(x, y, z, transit_params):
     i_star = np.radians(transit_params.inc_stellar)
     lam_star = np.radians(transit_params.lam)
-    x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=-i_star), alpha=-lam_star)
+    # x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=-i_star), alpha=-lam_star)
+    x_p, y_p, z_p = R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star)
+    # x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=i_star), alpha=lam_star)
     return x_p, y_p, z_p
 
 
@@ -404,7 +408,6 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
 
     """
     #n_points = 31#11
-    print("lat grid spacing: {0} deg".format(180./(n_points-1)))
     pi = np.pi
 
     # Longitudes
@@ -440,138 +443,3 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
                                   alpha=lam_star)
 
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
-
-if __name__ == '__main__':
-    from lightcurve import hat11_params_morris
-    from fitting import generate_lc
-    thetas = np.linspace(0, 2*np.pi, 10000)
-    transit_params = hat11_params_morris() # pysyzygy_example()  #  #
-    #transit_params.inc = 87.0
-
-    times = np.linspace(transit_params.t0 - 0.07,
-                        transit_params.t0 + 0.07, 1000)
-    #times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + transit_params.per, 100)
-
-    plot_pos_times = np.linspace(transit_params.t0 - 0.07,
-                                 transit_params.t0 + 0.07, 40)
-
-    X, Y, Z = planet_position_cartesian(plot_pos_times, transit_params)
-
-    fig, ax = plt.subplots(2, 3, figsize=(14, 10))
-    ax[0, 0].plot(*unit_circle(thetas))
-    ax[0, 1].plot(*unit_circle(thetas), 'b')
-    ax[1, 1].plot(*unit_circle(thetas), 'b')
-    ax[0, 2].plot(*unit_circle(thetas), 'b')
-    ax[1, 2].plot(*unit_circle(thetas), 'b')
-
-    model_lc = generate_lc(times, transit_params)
-    ax[1, 0].plot(times, model_lc)
-    ax[1, 0].plot(plot_pos_times, generate_lc(plot_pos_times, transit_params),
-                  'r.')
-    ax[1, 0].set(xlim=[times.min(), times.max()], ylim=[model_lc.min()*0.999,
-                                                        model_lc.max()*1.001],
-                 xlabel='Time [JD]', ylabel='Flux')
-
-    # Plot gridlines
-    [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params)
-
-    plot_lat_lon_gridlines(ax[0, 0], [lat_x, lat_y, lat_z],
-                           plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
-    plot_lat_lon_gridlines(ax[0, 0], [lon_x, lon_y, lon_z],
-                           plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
-
-    plot_lat_lon_gridlines(ax[0, 1], [lat_x, lat_y, -lat_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)
-    plot_lat_lon_gridlines(ax[0, 1], [lon_x, lon_y, -lon_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)
-
-    plot_lat_lon_gridlines(ax[1, 1], [lat_x, lat_y, lat_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1,
-                           flip_sign=-1)
-    plot_lat_lon_gridlines(ax[1, 1], [lon_x, lon_y, lon_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1,
-                           flip_sign=-1)
-
-    [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params, transit_view=False)
-
-    plot_lat_lon_gridlines(ax[0, 2], [lat_x, lat_y, lat_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-                           #flip_sign=-1)
-    plot_lat_lon_gridlines(ax[0, 2], [lon_x, lon_y, lon_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-                           #flip_sign=-1)
-
-    plot_lat_lon_gridlines(ax[1, 2], [lat_x, lat_y, lat_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-                           #flip_sign=-1)
-    plot_lat_lon_gridlines(ax[1, 2], [lon_x, lon_y, lon_z],
-                           plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-                          # flip_sign=-1)
-
-
-
-    cmap = plt.cm.winter
-    for i, x, y, z in zip(range(len(X)), X, Y, Z):
-        circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
-                            color=cmap(float(i)/len(X)))#'k')
-        c = ax[0, 0].add_patch(circle)
-        c.set_zorder(20)
-
-    ax[0, 0].set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view",
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5])
-
-    ax[0, 1].set(xlabel='$x / R_s$', ylabel='$-z / R_s$',
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top orbit view")
-
-    ax[1, 1].set(xlabel='$x / R_s$', ylabel='$z / R_s$',
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom orbit view")
-
-    ax[0, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
-
-    ax[1, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
-                 xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom view")
-
-    ax[0, 0].set_aspect('equal')
-    ax[0, 1].set_aspect('equal')
-    ax[0, 2].set_aspect('equal')
-    ax[1, 1].set_aspect('equal')
-    ax[1, 2].set_aspect('equal')
-
-    # Plot projected onto stellar surface
-    # spot_x = X
-    # spot_y = Y
-    # spot_z = np.sqrt(1 - X**2 - Y**2)
-    spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-
-
-    ax[0, 0].scatter(spot_x, spot_y, color='g')
-    ax[0, 1].scatter(spot_x[spot_y > 0], -spot_z[spot_y > 0], color='g')
-    ax[1, 1].scatter(spot_x[spot_y < 0], spot_z[spot_y < 0], color='g')
-
-    spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
-
-
-    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
-    latitude, longitude = spherical_to_latlon(spot_r, spot_theta, spot_phi)
-    plt.figure()
-    plt.plot(latitude)
-    plt.plot(longitude)
-
-    ax[0, 2].scatter(-spot_z_s[spot_x_s > 0], spot_y_s[spot_x_s > 0], color='g')
-    ax[1, 2].scatter(-spot_z_s[spot_x_s < 0], spot_y_s[spot_x_s < 0], color='g')
-
-    # Orbit view:
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111)
-    # ax.plot(*unit_circle(thetas))
-    # for i, x, y, z in zip(range(len(X)), X, Y, Z):
-    #     circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
-    #                         color=cmap(float(i)/len(X)))#'k')
-    #     c = ax.add_patch(circle)
-    #     c.set_zorder(20)
-    # ax.set_aspect('equal')
-    #
-    # ax.set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view")
-
-    plt.show()
