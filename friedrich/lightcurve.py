@@ -86,8 +86,9 @@ def hat11_params_morris():
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
-    params.lam = 106.0            # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.lam = 106.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.inc_stellar = 80     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = 29.984     # Morris periodogram days
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
@@ -511,6 +512,8 @@ class TransitLightCurve(LightCurve):
         self.times = times
         self.fluxes = fluxes
         self.errors = errors
+        if self.times is not None and quarters is None:
+            quarters = np.zeros_like(self.fluxes) - 1
         self.quarters = quarters
         self.name = name
         self.rescaled = False
@@ -605,6 +608,63 @@ class TransitLightCurve(LightCurve):
             self.fluxes *= scaling_vector
             self.errors *= scaling_vector
             self.rescaled = True
+
+
+    def fit_polynomial_baseline(self, params, order=2, cadence=1*u.min, return_near_transit=False,
+                                plots=False):
+        """
+        Find OOT portions of transit light curve using similar method to
+        `LightCurve.mask_out_of_transit`, fit linear baseline to OOT
+        """
+        cadence_buffer = cadence.to(u.day).value
+        get_oot_duration_fraction = 0
+        phased = (self.times.jd - params.t0) % params.per
+        near_transit = ((phased < params.duration*(0.5 + get_oot_duration_fraction) + cadence_buffer) |
+                        (phased > params.per - params.duration*(0.5 + get_oot_duration_fraction) - cadence_buffer))
+
+        # Remove polynomial baseline trend
+        polynomial_baseline = np.polyfit(self.times.jd[-near_transit],
+                                     self.fluxes[-near_transit], order)
+        polynomial_baseline_fit = np.polyval(polynomial_baseline, self.times.jd)
+
+        if plots:
+            fig, ax = plt.subplots(1, 2, figsize=(15,6))
+            ax[0].axhline(1, ls='--', color='k')
+            ax[0].plot(self.times.jd, polynomial_baseline_fit, 'r')
+            ax[0].plot(self.times.jd, self.fluxes, 'bo')
+            plt.show()
+
+        if return_near_transit:
+            return polynomial_baseline, near_transit
+        else:
+            return polynomial_baseline
+
+
+    def subtract_polynomial_baseline(self, params, plots=False, order=2,
+                                     cadence=1*u.min):
+        """
+        Find OOT portions of transit light curve using similar method to
+        `LightCurve.mask_out_of_transit`, fit polynomial baseline to OOT,
+        subtract whole light curve by that fit.
+        """
+
+        polynomial_baseline, near_transit = self.fit_polynomial_baseline(cadence=cadence, order=order,
+                                                                 return_near_transit=True, params=params)
+        polynomial_baseline_fit = np.polyval(polynomial_baseline, self.times.jd)
+        self.fluxes =  self.fluxes - polynomial_baseline_fit
+        self.errors = self.errors
+
+        if plots:
+            fig, ax = plt.subplots(1, 2, figsize=(15,6))
+            ax[0].axhline(1, ls='--', color='k')
+            ax[0].plot(self.times.jd, self.fluxes, 'o')
+            #ax[0].plot(self.times.jd[near_transit], self.fluxes[near_transit], 'ro')
+            ax[0].set_title('before trend removal')
+
+            ax[1].set_title('after trend removal')
+            ax[1].axhline(1, ls='--', color='k')
+            ax[1].plot(self.times.jd, self.fluxes, 'o')
+            plt.show()
 
     @classmethod
     def from_dir(cls, path):

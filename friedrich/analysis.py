@@ -19,6 +19,8 @@ from astroML.plotting import plot_tissot_ellipse
 import matplotlib.pyplot as plt
 from corner import corner
 import numpy as np
+import os
+
 
 class MCMCResults(object):
     """
@@ -38,6 +40,8 @@ class MCMCResults(object):
         self.lc = TransitLightCurve(times=lc_matrix[0, :],
                                     fluxes=lc_matrix[1, :],
                                     errors=lc_matrix[2, :])
+
+        self.index = archive_path.split(os.sep)[-1].split('.')[0]
 
     def plot_lnprob(self):
         """
@@ -119,7 +123,7 @@ class MCMCResults(object):
         transit_params = hat11_params_morris()
         X, Y, Z = planet_position_cartesian(time, transit_params)
         spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
+        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, time)
         spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
         latitude, longitude = spherical_to_latlon(spot_r, spot_theta, spot_phi)
 
@@ -175,10 +179,9 @@ class MCMCResults(object):
             ax[1].plot(plot_pos_times, generate_lc(plot_pos_times, transit_params),
                           'ro')
 
-
             X, Y, Z = planet_position_cartesian(plot_pos_times, transit_params)
             spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, t)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
 
             cmap = plt.cm.winter
@@ -195,166 +198,17 @@ class MCMCResults(object):
 
         ax[0].set_aspect('equal')
 
-
-    #
-    # def plot_star(self):
-    #
-    #     thetas = np.linspace(0, 2*np.pi, 10000)
-    #     transit_params = hat11_params_morris() # pysyzygy_example()  #  #
-    #     #transit_params.inc = 87.0
-    #
-    #     t0 = self.lc.times.jd.mean()
-    #     spot_times = self.chains[::500, 2::3].T
-    #     fig, ax = plt.subplots(2, 3, figsize=(14, 10))
-    #
-    #
-    #     ax[0, 0].plot(*unit_circle(thetas))
-    #     ax[0, 1].plot(*unit_circle(thetas), color='b')
-    #     ax[1, 1].plot(*unit_circle(thetas), color='b')
-    #     ax[0, 2].plot(*unit_circle(thetas), color='b')
-    #     ax[1, 2].plot(*unit_circle(thetas), color='b')
-    #
-    #
-    #     # Plot gridlines
-    #     [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params)
-    #
-    #     plot_lat_lon_gridlines(ax[0, 0], [lat_x, lat_y, lat_z],
-    #                            plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
-    #     plot_lat_lon_gridlines(ax[0, 0], [lon_x, lon_y, lon_z],
-    #                            plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
-    #
-    #     plot_lat_lon_gridlines(ax[0, 1], [lat_x, lat_y, -lat_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)
-    #     plot_lat_lon_gridlines(ax[0, 1], [lon_x, lon_y, -lon_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)
-    #
-    #     plot_lat_lon_gridlines(ax[1, 1], [lat_x, lat_y, lat_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1,
-    #                            flip_sign=-1)
-    #     plot_lat_lon_gridlines(ax[1, 1], [lon_x, lon_y, lon_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1,
-    #                            flip_sign=-1)
-    #
-    #     [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params, transit_view=False)
-    #
-    #     plot_lat_lon_gridlines(ax[0, 2], [lat_x, lat_y, lat_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-    #                            #flip_sign=-1)
-    #     plot_lat_lon_gridlines(ax[0, 2], [lon_x, lon_y, lon_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-    #                            #flip_sign=-1)
-    #
-    #     plot_lat_lon_gridlines(ax[1, 2], [lat_x, lat_y, lat_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-    #                            #flip_sign=-1)
-    #     plot_lat_lon_gridlines(ax[1, 2], [lon_x, lon_y, lon_z],
-    #                            plot_x_axis=0, plot_y_axis=2, plot_color_axis=1)#,
-    #                           # flip_sign=-1)
-    #
-    #     for t in spot_times:
-    #         #times = t
-    #         times = np.linspace(t0 - 0.07, t0 + 0.07, 1000)
-    #         #times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + transit_params.per, 100)
-    #
-    #         plot_pos_times = t #np.linspace(transit_params.t0 - 0.07,
-    #                          #            transit_params.t0 + 0.07, 40)
-    #
-    #         model_lc = generate_lc(times, transit_params)
-    #         ax[1, 0].plot(times, model_lc)
-    #         ax[1, 0].plot(plot_pos_times, generate_lc(plot_pos_times, transit_params),
-    #                       'ro')
-    #
-    #
-    #         X, Y, Z = planet_position_cartesian(plot_pos_times, transit_params)
-    #         spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-    #         spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
-    #         spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
-    #
-    #         cmap = plt.cm.winter
-    #         for i, x, y, z in zip(range(len(X)), X, Y, Z):
-    #             circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
-    #                                 color=cmap(float(i)/len(X)))#'k')
-    #             c = ax[0, 0].add_patch(circle)
-    #             c.set_zorder(20)
-    #
-    #        # Plot projected onto stellar surface
-    #         # spot_x = X
-    #         # spot_y = Y
-    #         # spot_z = np.sqrt(1 - X**2 - Y**2)
-    #
-    #         ax[0, 0].scatter(spot_x, spot_y, color='g')
-    #         ax[0, 1].scatter(spot_x[spot_y > 0], -spot_z[spot_y > 0], color='g')
-    #         ax[1, 1].scatter(spot_x[spot_y < 0], spot_z[spot_y < 0], color='g')
-    #
-    #
-    #
-    #         print('from bmm:\ntheta={0}\nphi={1}'.format(np.median(spot_theta), np.median(spot_phi)))
-    #         print('for stsp\nr={0}\nphi={1}\ntheta={2}'.format(np.median(spot_r),
-    #                                                            np.median(spot_theta) + 2*np.pi,
-    #                                                            np.pi/2 - np.median(spot_phi)))
-    #         latitude, longitude = spherical_to_latlon(spot_r, spot_theta, spot_phi)
-    #
-    #         ax[0, 2].scatter(-spot_z_s[spot_x_s > 0], spot_y_s[spot_x_s > 0], color='g')
-    #         ax[1, 2].scatter(-spot_z_s[spot_x_s < 0], spot_y_s[spot_x_s < 0], color='g')
-    #
-    #     # Orbit view:
-    #     # fig = plt.figure()
-    #     # ax = fig.add_subplot(111)
-    #     # ax.plot(*unit_circle(thetas))
-    #     # for i, x, y, z in zip(range(len(X)), X, Y, Z):
-    #     #     circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
-    #     #                         color=cmap(float(i)/len(X)))#'k')
-    #     #     c = ax.add_patch(circle)
-    #     #     c.set_zorder(20)
-    #     # ax.set_aspect('equal')
-    #     #
-    #     # ax.set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view")
-    #
-    #     ax[0, 0].set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view",
-    #                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5])
-    #
-    #     ax[0, 1].set(xlabel='$x / R_s$', ylabel='$-z / R_s$',
-    #                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top orbit view")
-    #
-    #     ax[1, 1].set(xlabel='$x / R_s$', ylabel='$z / R_s$',
-    #                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom orbit view")
-    #
-    #     ax[0, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
-    #                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Top view")
-    #
-    #     ax[1, 2].set(xlabel='$-z^\\prime / R_s$', ylabel='$y^\\prime / R_s$',
-    #                  xlim=[-1.5, 1.5], ylim=[-1.5, 1.5], title="Bottom view")
-    #
-    #     ax[0, 0].set_aspect('equal')
-    #     ax[0, 1].set_aspect('equal')
-    #     ax[0, 2].set_aspect('equal')
-    #     ax[1, 1].set_aspect('equal')
-    #     ax[1, 2].set_aspect('equal')
-
-
     def plot_star_projected(self):
-
-#        from astroML.plotting import setup_text_plots
-#         setup_text_plots(fontsize=14, usetex=True)
-
-        #------------------------------------------------------------
-        # generate a latitude/longitude grid
-        #circ_long = np.linspace(-np.pi, np.pi, 13)[1:-1]
-        #circ_lat = np.linspace(-np.pi / 2, np.pi / 2, 7)[1:-1]
-        radius = 10 * np.pi / 180.
-
-        #------------------------------------------------------------
-        # Plot the built-in projections
-        plt.figure(figsize=(10, 8))
-        plt.subplots_adjust(hspace=0, wspace=0.12,
-                            left=0.08, right=0.95,
-                            bottom=0.05, top=1.0)
-
-        #for (i, projection) in enumerate(['Hammer', 'Aitoff', 'Mollweide', 'Lambert']):
-        i = 0
+        transit_params = hat11_params_morris() # pysyzygy_example()  #  #
+        # projections: ['Hammer', 'Aitoff', 'Mollweide', 'Lambert']
         projection = 'Hammer'
-        ax = plt.subplot(111, projection=projection.lower())
 
+        # Plot the built-in projections
+        plt.figure(figsize=(10, 10))
+        ax = plt.subplot(211, projection=projection.lower())
+        ax2 = plt.subplot(212)
+
+        # plot latitude/longitude grid
         ax.xaxis.set_major_locator(plt.FixedLocator(np.pi / 3
                                                     * np.linspace(-2, 2, 5)))
         ax.xaxis.set_minor_locator(plt.FixedLocator(np.pi / 6
@@ -364,31 +218,69 @@ class MCMCResults(object):
         ax.yaxis.set_minor_locator(plt.FixedLocator(np.pi / 12
                                                     * np.linspace(-5, 5, 11)))
 
-        ax.grid(True, which='minor')
+        ax.grid(True, which='minor', color='gray', ls=':')
+        ax.set_title(self.index)
 
-        # plot_tissot_ellipse(circ_long[:, None], circ_lat, radius,
-        #                     ax=ax, fc='k', alpha=0.3, linewidth=0)
-        ax.set_title('%s projection' % projection)
+        # plot transit path
+        in_transit_times = self.lc.mask_out_of_transit(transit_params, oot_duration_fraction=0)['times'].jd
+        transit_chord_X, transit_chord_Y, transit_chord_Z = planet_position_cartesian(in_transit_times, transit_params)
+        transit_chord_x, transit_chord_y, transit_chord_z = project_planet_to_stellar_surface(transit_chord_X, transit_chord_Y)
+        transit_chord_x_s, transit_chord_y_s, transit_chord_z_s = observer_view_to_stellar_view(transit_chord_x,
+                                                                                                transit_chord_y,
+                                                                                                transit_chord_z,
+                                                                                                transit_params,
+                                                                                                in_transit_times)
+        transit_chord_r, transit_chord_theta, transit_chord_phi = cartesian_to_spherical(transit_chord_x_s,
+                                                                                         transit_chord_y_s,
+                                                                                         transit_chord_z_s)
 
-        transit_params = hat11_params_morris() # pysyzygy_example()  #  #
-        #transit_params.inc = 87.0
+        longitude = transit_chord_theta
+        latitude = np.pi/2 - transit_chord_phi
 
-        t0 = self.lc.times.jd.mean()
-#        t = self.chains[::3, 2][::500]
-        times = self.chains[::500, 2::3].T
+        ax.scatter(longitude, latitude, color='k', s=0.7, alpha=0.5)
+
+
+        # plot tissot ellipses for samples from the gaussian spots
+        skip_every = 20000  # plots 50 ellipses per spot
+        times = self.chains[::skip_every, 2::3].T
+        amplitudes = self.chains[::skip_every, 1::3].T
         n_spots = times.shape[0]
         colors = ['b', 'g', 'r']
         while n_spots > len(colors):
             colors.extend(colors)
-        for i, time in enumerate(times):
+
+        for i, time, amplitude in zip(range(len(times)), times, amplitudes):
             X, Y, Z = planet_position_cartesian(time, transit_params)
             spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params)
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, time)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
 
             longitude = spot_theta
             latitude = np.pi/2 - spot_phi
 
-            plot_tissot_ellipse(longitude, latitude, radius,
-                                ax=ax, fc=colors[i], alpha=0.01, linewidth=0)
+            alpha = np.median(amplitude)/transit_params.rp**2/5
+            radius = 2*transit_params.rp  # from s=r*theta
+            plot_tissot_ellipse(longitude, latitude, radius, ax=ax, linewidth=0,
+                                fc=colors[i], alpha=alpha)
+
+        # plot transit+spots model
+        model = spotted_transit_model(self.best_params, self.lc.times.jd,
+                                      transit_params)
+        individual_models = spotted_transit_model_individuals(self.best_params,
+                                                              self.lc.times.jd,
+                                                              transit_params)
+
+        errorbar_props = dict(fmt='.', color='k', capsize=0, ecolor='gray')
+
+
+        min_jd_int = int(self.lc.times.jd.min())
+        ax2.errorbar(self.lc.times.jd - min_jd_int, self.lc.fluxes,
+                       self.lc.errors, **errorbar_props)
+        ax2.plot(self.lc.times.jd - min_jd_int, model, 'r', lw='3')
+
+        for individual_model in individual_models:
+            ax2.plot(self.lc.times.jd - min_jd_int, individual_model, 'b')
+
+        ax2.set_xlabel('JD - {0}'.format(min_jd_int))
+        ax2.set_ylabel('Flux')
 

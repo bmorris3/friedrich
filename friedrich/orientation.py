@@ -382,12 +382,33 @@ def project_planet_to_stellar_surface(x, y):
     return x, y, projected_z
 
 
-def observer_view_to_stellar_view(x, y, z, transit_params):
+# def observer_view_to_stellar_view(x, y, z, transit_params):
+#     """
+#     First rotate to remove lambda (rotation about z-axis).
+#     Then rotate to remove i_s (rotation about x-axis).
+#     """
+#     i_star = np.radians(transit_params.inc_stellar)
+#     lam_star = np.radians(transit_params.lam)
+#     x_p, y_p, z_p = R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star)
+#     return x_p, y_p, z_p
+
+def observer_view_to_stellar_view(x, y, z, transit_params, times,
+                                  stellar_t0=0.0):
+    """
+    First rotate to remove lambda (rotation about z-axis). Then rotate to
+    remove i_s (rotation about x-axis). Then rotate one last time to remove
+    stellar rotation with time (rotation about z-axis again).
+    """
+
     i_star = np.radians(transit_params.inc_stellar)
     lam_star = np.radians(transit_params.lam)
-    # x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=-i_star), alpha=-lam_star)
-    x_p, y_p, z_p = R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star)
-    # x_p, y_p, z_p = R_z(*R_x(x, y, z, alpha=i_star), alpha=lam_star)
+    per_rot = transit_params.per_rot
+    t_mean = np.mean(times)
+
+    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
+                             alpha=-i_star),
+                        alpha=(-2*np.pi/per_rot *
+                               ((t_mean - stellar_t0) % per_rot)))
     return x_p, y_p, z_p
 
 
