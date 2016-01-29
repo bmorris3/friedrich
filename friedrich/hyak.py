@@ -87,7 +87,7 @@ if __name__ == '__main__':
         run_dir = log_dir = '/gscratch/stf/bmmorris/friedrich/logs'
         walltime = '01:00:00'
         email = 'bmmorris@uw.edu'
-        run_script = '/usr/lusers/bmmorris/git/friedrich/hat11_hyak.py'
+        run_script = '/usr/lusers/bmmorris/git/friedrich/hat11/hat11_hyak.py'
         transit_number = str(i)
         submit_script_name = 'submit_script_{0}.sh'.format(transit_number)
 
