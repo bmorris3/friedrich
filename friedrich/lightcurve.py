@@ -610,7 +610,7 @@ class TransitLightCurve(LightCurve):
             self.rescaled = True
 
 
-    def fit_polynomial_baseline(self, params, order=2, cadence=1*u.min, return_near_transit=False,
+    def fit_polynomial_baseline(self, params, order=2, cadence=1*u.min,
                                 plots=False):
         """
         Find OOT portions of transit light curve using similar method to
@@ -622,10 +622,12 @@ class TransitLightCurve(LightCurve):
         near_transit = ((phased < params.duration*(0.5 + get_oot_duration_fraction) + cadence_buffer) |
                         (phased > params.per - params.duration*(0.5 + get_oot_duration_fraction) - cadence_buffer))
 
-        # Remove polynomial baseline trend
-        polynomial_baseline = np.polyfit(self.times.jd[-near_transit],
-                                     self.fluxes[-near_transit], order)
-        polynomial_baseline_fit = np.polyval(polynomial_baseline, self.times.jd)
+        # Remove polynomial baseline trend after subtracting the times by its
+        # mean -- this improves numerical stability for polyfit
+        downscaled_times = self.times.jd - self.times.jd.mean()
+        polynomial_baseline = np.polyfit(downscaled_times[-near_transit],
+                                         self.fluxes[-near_transit], order)
+        polynomial_baseline_fit = np.polyval(polynomial_baseline, downscaled_times)
 
         if plots:
             fig, ax = plt.subplots(1, 2, figsize=(15,6))
@@ -634,10 +636,8 @@ class TransitLightCurve(LightCurve):
             ax[0].plot(self.times.jd, self.fluxes, 'bo')
             plt.show()
 
-        if return_near_transit:
-            return polynomial_baseline, near_transit
-        else:
-            return polynomial_baseline
+        return polynomial_baseline_fit
+
 
 
     def subtract_polynomial_baseline(self, params, plots=False, order=2,
@@ -648,10 +648,10 @@ class TransitLightCurve(LightCurve):
         subtract whole light curve by that fit.
         """
 
-        polynomial_baseline, near_transit = self.fit_polynomial_baseline(cadence=cadence, order=order,
-                                                                 return_near_transit=True, params=params)
-        polynomial_baseline_fit = np.polyval(polynomial_baseline, self.times.jd)
-        self.fluxes =  self.fluxes - polynomial_baseline_fit
+        polynomial_baseline_fit = self.fit_polynomial_baseline(cadence=cadence,
+                                                               order=order,
+                                                               params=params)
+        self.fluxes = self.fluxes - polynomial_baseline_fit
         self.errors = self.errors
 
         if plots:
