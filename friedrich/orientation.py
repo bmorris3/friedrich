@@ -464,3 +464,18 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
                                   alpha=lam_star)
 
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
+
+def times_to_occulted_lat_lon(times, transit_params):
+    X, Y, Z = planet_position_cartesian(times, transit_params)
+    spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+    spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y,
+                                                                 spot_z,
+                                                                 transit_params,
+                                                                 times)
+    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+
+    longitude = spot_theta
+    latitude = np.pi/2 - spot_phi
+    return latitude, longitude
+
+

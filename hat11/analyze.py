@@ -24,13 +24,13 @@ import matplotlib.pyplot as plt
 # plt.savefig('tmp/{0:03d}.png'.format(int(sys.argv[1])))
 # #plt.show()
 
-archive_paths = glob('/media/PASSPORT/friedrich/chains???.hdf5')
-
+archive_paths = sorted(glob('/local/tmp/friedrich/chains???.hdf5'))
+#archive_paths = ['/local/tmp/friedrich/chains033.hdf5']
 for archive_path in archive_paths:
     m = MCMCResults(archive_path)
     m.plot_star_projected()
     transit_number = m.index.split('chains')[1]
     plt.savefig('tmp/{0:03d}.png'.format(int(transit_number)))
-    # plt.show()
+    #plt.show()
     plt.close()
 #plt.show()

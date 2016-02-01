@@ -12,12 +12,15 @@ from .orientation import (planet_position_cartesian, observer_view_to_stellar_vi
                           project_planet_to_stellar_surface)
 from .orientation import (true_anomaly, plot_lat_lon_gridlines, observer_view_to_stellar_view,
                           unit_circle, cartesian_to_spherical, spherical_to_cartesian,
-                          get_lat_lon_grid)
+                          get_lat_lon_grid, times_to_occulted_lat_lon)
 
 from astroML.plotting import plot_tissot_ellipse
 
 import matplotlib.pyplot as plt
-from corner import corner
+try:
+    from corner import corner
+except ImportError:
+    pass
 import numpy as np
 import os
 
@@ -223,19 +226,18 @@ class MCMCResults(object):
 
         # plot transit path
         in_transit_times = self.lc.mask_out_of_transit(transit_params, oot_duration_fraction=0)['times'].jd
-        transit_chord_X, transit_chord_Y, transit_chord_Z = planet_position_cartesian(in_transit_times, transit_params)
-        transit_chord_x, transit_chord_y, transit_chord_z = project_planet_to_stellar_surface(transit_chord_X, transit_chord_Y)
-        transit_chord_x_s, transit_chord_y_s, transit_chord_z_s = observer_view_to_stellar_view(transit_chord_x,
-                                                                                                transit_chord_y,
-                                                                                                transit_chord_z,
-                                                                                                transit_params,
-                                                                                                in_transit_times)
-        transit_chord_r, transit_chord_theta, transit_chord_phi = cartesian_to_spherical(transit_chord_x_s,
-                                                                                         transit_chord_y_s,
-                                                                                         transit_chord_z_s)
+        # transit_chord_X, transit_chord_Y, transit_chord_Z = planet_position_cartesian(in_transit_times, transit_params)
+        # transit_chord_x, transit_chord_y, transit_chord_z = project_planet_to_stellar_surface(transit_chord_X, transit_chord_Y)
+        # transit_chord_x_s, transit_chord_y_s, transit_chord_z_s = observer_view_to_stellar_view(transit_chord_x,
+        #                                                                                         transit_chord_y,
+        #                                                                                         transit_chord_z,
+        #                                                                                         transit_params,
+        #                                                                                         in_transit_times)
+        # transit_chord_r, transit_chord_theta, transit_chord_phi = cartesian_to_spherical(transit_chord_x_s,
+        #                                                                                  transit_chord_y_s,
+        #                                                                                  transit_chord_z_s)
 
-        longitude = transit_chord_theta
-        latitude = np.pi/2 - transit_chord_phi
+        latitude, longitude = times_to_occulted_lat_lon(in_transit_times, transit_params)
 
         ax.scatter(longitude, latitude, color='k', s=0.7, alpha=0.5)
 
@@ -283,4 +285,37 @@ class MCMCResults(object):
 
         ax2.set_xlabel('JD - {0}'.format(min_jd_int))
         ax2.set_ylabel('Flux')
+
+
+class Measurement(object):
+    """
+    Store a measurement from posterior distribution function with
+    upper and lower errorbars
+    """
+    def __init__(self, value, upper, lower):
+        self.value = value
+        self.upper = upper
+        self.lower = lower
+
+    def __repr__(self):
+        return "{0.value} +{0.upper} -{0.lower}".format(self)
+
+
+class Spot(object):
+    """
+    Store collection of Measurements for spot parameters
+    """
+    def __init__(self, amplitude, t0, sigma):
+        self.amplitude = amplitude
+        self.sigma = sigma
+        self.t0 = t0
+
+
+class Transit(object):
+    """
+    Store a collection of spots
+    """
+    def __init__(self, spot_list):
+        self.spots = spot_list
+
 
