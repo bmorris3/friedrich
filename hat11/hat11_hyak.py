@@ -34,7 +34,7 @@ hat11_params = hat11_params_morris()
 # Construct light curve object from the raw data
 whole_lc = LightCurve.from_raw_fits(light_curve_paths, name='HAT11')
 transits = LightCurve(**whole_lc.mask_out_of_transit(hat11_params,
-                                                     oot_duration_fraction=0.25)
+                                                     oot_duration_fraction=0.5)
                       ).get_transit_light_curves(hat11_params)
 
 # Compute maxes for each quarter
