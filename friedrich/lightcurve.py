@@ -94,6 +94,44 @@ def hat11_params_morris():
     # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
     return params
 
+def k17_params_morris():
+    """
+    Transit light curve parameters from Brett for Kepler-17. Some parameters
+    constrained by Desert et al. (2011) [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for Kepler-17
+
+    .. [1] http://adsabs.harvard.edu/abs/2011ApJS..197...14D
+    """
+    sqrt_e_cosw = 0.008
+    sqrt_e_sinw = -0.084
+    eccentricity = np.sqrt(sqrt_e_cosw**2 + sqrt_e_sinw**2)**2
+    omega = np.degrees(np.arctan2(sqrt_e_sinw, sqrt_e_cosw))
+
+    params = batman.TransitParams()
+    params.t0 = 2455185.67863     # time of inferior conjunction
+    params.per = 1.48571118         # orbital period
+    params.rp = 0.01732**0.5            # planet radius (in units of stellar radii)
+    b = 0.115                      # impact parameter
+    dur = 0.0948                  # transit duration
+    params.inc = 88.92684              # orbital inclination (in degrees)
+
+    params.ecc = eccentricity      # eccentricity
+    params.w = omega               # longitude of periastron (in degrees)
+    params.a = 5.661768                # semi-major axis (in units of stellar radii)
+    params.u = [0.40368, 0.25764]      # limb darkening coefficients
+    params.limb_dark = "quadratic" # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = dur
+    params.lam = 0.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 90     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = 29.984     # Morris periodogram days
+    return params
+
 
 def generate_lc_depth(times, depth, transit_params):
     """

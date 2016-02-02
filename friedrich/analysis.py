@@ -29,7 +29,7 @@ class MCMCResults(object):
     """
     Visualize results from `friedrich.fitting.run_emcee_seeded`
     """
-    def __init__(self, archive_path):
+    def __init__(self, archive_path, transit_params):
         """
         Parameters
         ----------
@@ -45,6 +45,7 @@ class MCMCResults(object):
                                     errors=lc_matrix[2, :])
 
         self.index = archive_path.split(os.sep)[-1].split('.')[0]
+        self.transit_params = transit_params
 
     def plot_lnprob(self):
         """
@@ -75,21 +76,21 @@ class MCMCResults(object):
 
         corner(self.chains[::skip_every, :], labels=labels)
 
-    def plot_max_lnp_lc(self, transit_params):
+    def plot_max_lnp_lc(self):
         """
         Plot the maximum likelihood transit+spots model over the data.
 
         Parameters
         ----------
-        transit_params : `~batman.TransitParams`
+        self.transit_params : `~batman.TransitParams`
             Transit light curve parameters
 
         """
         model = spotted_transit_model(self.best_params, self.lc.times.jd,
-                                      transit_params)
+                                      self.transit_params)
         individual_models = spotted_transit_model_individuals(self.best_params,
                                                               self.lc.times.jd,
-                                                              transit_params)
+                                                              self.transit_params)
 
         errorbar_props = dict(fmt='.', color='k', capsize=0, ecolor='gray')
 
@@ -123,10 +124,10 @@ class MCMCResults(object):
 
         time = self.chains[:, 2]
         #corner(self.chains[:, 2::3])
-        transit_params = hat11_params_morris()
-        X, Y, Z = planet_position_cartesian(time, transit_params)
+        self.transit_params = hat11_params_morris()
+        X, Y, Z = planet_position_cartesian(time, self.transit_params)
         spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, time)
+        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params, time)
         spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
         latitude, longitude = spherical_to_latlon(spot_r, spot_theta, spot_phi)
 
@@ -152,8 +153,8 @@ class MCMCResults(object):
     def plot_star(self):
 
         thetas = np.linspace(0, 2*np.pi, 10000)
-        transit_params = hat11_params_morris() # pysyzygy_example()  #  #
-        #transit_params.inc = 87.0
+        self.transit_params = hat11_params_morris() # pysyzygy_example()  #  #
+        #self.transit_params.inc = 87.0
 
         t0 = self.lc.times.jd.mean()
         spot_times = self.chains[::500, 2::3].T
@@ -162,7 +163,7 @@ class MCMCResults(object):
         ax[0].plot(*unit_circle(thetas))
 
         # Plot gridlines
-        [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, transit_params)
+        [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, self.transit_params)
 
         plot_lat_lon_gridlines(ax[0], [lat_x, lat_y, lat_z],
                                plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
@@ -172,24 +173,24 @@ class MCMCResults(object):
         for t in spot_times:
             #times = t
             times = np.linspace(t0 - 0.07, t0 + 0.07, 1000)
-            #times = np.linspace(transit_params.t0 - 0.07, transit_params.t0 + transit_params.per, 100)
+            #times = np.linspace(self.transit_params.t0 - 0.07, self.transit_params.t0 + self.transit_params.per, 100)
 
-            plot_pos_times = t #np.linspace(transit_params.t0 - 0.07,
-                             #            transit_params.t0 + 0.07, 40)
+            plot_pos_times = t #np.linspace(self.transit_params.t0 - 0.07,
+                             #            self.transit_params.t0 + 0.07, 40)
 
-            model_lc = generate_lc(times, transit_params)
+            model_lc = generate_lc(times, self.transit_params)
             ax[1].plot(times, model_lc)
-            ax[1].plot(plot_pos_times, generate_lc(plot_pos_times, transit_params),
+            ax[1].plot(plot_pos_times, generate_lc(plot_pos_times, self.transit_params),
                           'ro')
 
-            X, Y, Z = planet_position_cartesian(plot_pos_times, transit_params)
+            X, Y, Z = planet_position_cartesian(plot_pos_times, self.transit_params)
             spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, t)
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params, t)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
 
             cmap = plt.cm.winter
             for i, x, y, z in zip(range(len(X)), X, Y, Z):
-                circle = plt.Circle((x, y), radius=transit_params.rp, alpha=1,
+                circle = plt.Circle((x, y), radius=self.transit_params.rp, alpha=1,
                                     color=cmap(float(i)/len(X)))#'k')
                 c = ax[0].add_patch(circle)
                 c.set_zorder(20)
@@ -202,7 +203,6 @@ class MCMCResults(object):
         ax[0].set_aspect('equal')
 
     def plot_star_projected(self):
-        transit_params = hat11_params_morris() # pysyzygy_example()  #  #
         # projections: ['Hammer', 'Aitoff', 'Mollweide', 'Lambert']
         projection = 'Hammer'
 
@@ -225,19 +225,19 @@ class MCMCResults(object):
         ax.set_title(self.index)
 
         # plot transit path
-        in_transit_times = self.lc.mask_out_of_transit(transit_params, oot_duration_fraction=0)['times'].jd
-        # transit_chord_X, transit_chord_Y, transit_chord_Z = planet_position_cartesian(in_transit_times, transit_params)
+        in_transit_times = self.lc.mask_out_of_transit(self.transit_params, oot_duration_fraction=0)['times'].jd
+        # transit_chord_X, transit_chord_Y, transit_chord_Z = planet_position_cartesian(in_transit_times, self.transit_params)
         # transit_chord_x, transit_chord_y, transit_chord_z = project_planet_to_stellar_surface(transit_chord_X, transit_chord_Y)
         # transit_chord_x_s, transit_chord_y_s, transit_chord_z_s = observer_view_to_stellar_view(transit_chord_x,
         #                                                                                         transit_chord_y,
         #                                                                                         transit_chord_z,
-        #                                                                                         transit_params,
+        #                                                                                         self.transit_params,
         #                                                                                         in_transit_times)
         # transit_chord_r, transit_chord_theta, transit_chord_phi = cartesian_to_spherical(transit_chord_x_s,
         #                                                                                  transit_chord_y_s,
         #                                                                                  transit_chord_z_s)
 
-        latitude, longitude = times_to_occulted_lat_lon(in_transit_times, transit_params)
+        latitude, longitude = times_to_occulted_lat_lon(in_transit_times, self.transit_params)
 
         ax.scatter(longitude, latitude, color='k', s=0.7, alpha=0.5)
 
@@ -252,25 +252,25 @@ class MCMCResults(object):
             colors.extend(colors)
 
         for i, time, amplitude in zip(range(len(times)), times, amplitudes):
-            X, Y, Z = planet_position_cartesian(time, transit_params)
+            X, Y, Z = planet_position_cartesian(time, self.transit_params)
             spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, transit_params, time)
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params, time)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
 
             longitude = spot_theta
             latitude = np.pi/2 - spot_phi
 
-            alpha = np.median(amplitude)/transit_params.rp**2/5
-            radius = 2*transit_params.rp  # from s=r*theta
+            alpha = np.median(amplitude)/self.transit_params.rp**2/5
+            radius = 2*self.transit_params.rp  # from s=r*theta
             plot_tissot_ellipse(longitude, latitude, radius, ax=ax, linewidth=0,
                                 fc=colors[i], alpha=alpha)
 
         # plot transit+spots model
         model = spotted_transit_model(self.best_params, self.lc.times.jd,
-                                      transit_params)
+                                      self.transit_params)
         individual_models = spotted_transit_model_individuals(self.best_params,
                                                               self.lc.times.jd,
-                                                              transit_params)
+                                                              self.transit_params)
 
         errorbar_props = dict(fmt='.', color='k', capsize=0, ecolor='gray')
 

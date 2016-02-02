@@ -151,10 +151,11 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
                                   xtol=0.00001, ftol=0.00001)
 
     # if np.all(result == input_parameters):
-    #     print 'oh no!, fmin didnt produce a fit')
+    #     print('oh no!, fmin didnt produce a fit')
 
     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
     # and amplitude is positive:
+    print(input_parameters)
     split_result = np.split(result, len(input_parameters)/3)
     result_in_transit = []
     for amplitude, t0, sigma in split_result:
@@ -195,6 +196,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
 
         fig.tight_layout()
         plt.show()
+
     return result_in_transit
 
 
@@ -310,7 +312,7 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
     sigma_ok = ((0.5/60/24 < sigmas) &
                 (sigmas < upper_t_bound - lower_t_bound)).all()
-    depth_ok = ((0.002 <= depth) & (depth < 0.005)).all()
+    depth_ok = ((0.002 <= depth) & (depth < 0.03)).all()
 
     if amplitude_ok and t0_ok and sigma_ok and depth_ok:
         return 0.0
