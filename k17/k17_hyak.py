@@ -20,7 +20,7 @@ if os.path.exists('/Users/bmmorris/data/kepler17/'):
     # on laptop:
     light_curve_paths = glob('/Users/bmmorris/data/kepler17/*slc.fits')
     output_dir = os.path.abspath('/Users/bmmorris/data')
-elif os.path.exists('/usr/lusers/bmmorris/data/k17/'):
+elif os.path.exists('/usr/lusers/bmmorris/data/kepler17/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/kepler17/*slc.fits')
     output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/k17')
