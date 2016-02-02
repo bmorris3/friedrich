@@ -78,8 +78,7 @@ cd $PBS_O_WORKDIR
 python {run_script} {transit_number}
 """
 
-def launch_hyak_run(n_transits, run_script, job_name='friedrich',
-                    run_dir='/gscratch/stf/bmmorris/friedrich/',
+def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
                     log_dir='/gscratch/stf/bmmorris/friedrich/logs',
                     submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
