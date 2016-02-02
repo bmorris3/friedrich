@@ -78,17 +78,15 @@ cd $PBS_O_WORKDIR
 python {run_script} {transit_number}
 """
 
-if __name__ == '__main__':
-    n_transits = 583
-    submit_script_dir = '/gscratch/stf/bmmorris/friedrich/submit_scripts'
+def launch_hyak_run(n_transits, run_script, job_name='friedrich',
+                    log_dir='/gscratch/stf/bmmorris/friedrich/logs',
+                    submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
     for i in range(n_transits):
-        job_name = 'friedrich_k17'
-        run_dir = log_dir = '/gscratch/stf/bmmorris/friedrich/logs'
+        run_dir = log_dir
         walltime = '01:00:00'
         email = 'bmmorris@uw.edu'
-        #run_script = '/usr/lusers/bmmorris/git/friedrich/hat11/hat11_hyak.py'
-        run_script = '/usr/lusers/bmmorris/git/friedrich/k17/k17_hyak.py'
+
         transit_number = str(i)
         submit_script_name = 'submit_script_{0}.sh'.format(transit_number)
 
