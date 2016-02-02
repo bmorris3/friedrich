@@ -155,14 +155,14 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
 
     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
     # and amplitude is positive:
-    print(input_parameters)
     split_result = np.split(result, len(input_parameters)/3)
     result_in_transit = []
     for amplitude, t0, sigma in split_result:
         depth = transit_params.rp**2
 
         trial_params = np.array([depth, amplitude, t0, sigma])
-        if lnprior(trial_params, residuals, lower_t_bound, upper_t_bound) == 0:
+        if not np.isinf(lnprior(trial_params, residuals, lower_t_bound,
+                                upper_t_bound, transit_params)):
             result_in_transit.extend([amplitude, t0, np.abs(sigma)])
     result_in_transit = np.array(result_in_transit)
 
@@ -282,7 +282,17 @@ def get_in_transit_bounds(times, params, duration_fraction=0.9):
     return times[near_transit].min(), times[near_transit].max()
 
 
-def lnprior(theta, y, lower_t_bound, upper_t_bound):
+def depth_prior(depth, transit_params):
+    """
+    Since we're not actually interested in the depth, apply a non-physically
+    motivated prior to the depth parameter, allowing it to vary by ~10% without
+    significant penalty.
+    """
+    expected_depth = transit_params.rp**2
+    return -0.5*((depth - expected_depth)**2 / (0.1*expected_depth)**2)
+
+
+def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params):
     """
     Log prior for `emcee` runs.
 
@@ -308,14 +318,14 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound):
     t0s = spot_params[1::3]
     sigmas = spot_params[2::3]
 
-    amplitude_ok = ((0 <= amplitudes) & (amplitudes < 0.2)).all()
+    amplitude_ok = ((0 <= amplitudes) & (amplitudes < depth)).all()
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
-    sigma_ok = ((0.5/60/24 < sigmas) &
+    sigma_ok = ((1.5/60/24 < sigmas) &
                 (sigmas < upper_t_bound - lower_t_bound)).all()
     depth_ok = ((0.002 <= depth) & (depth < 0.03)).all()
 
     if amplitude_ok and t0_ok and sigma_ok and depth_ok:
-        return 0.0
+        return 0.0 + depth_prior(depth, transit_params)
     return -np.inf
 
 
@@ -369,7 +379,7 @@ def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params):
     -------
 
     """
-    lp = lnprior(theta, y, lower_t_bound, upper_t_bound)
+    lp = lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params)
     if not np.isfinite(lp):
         return -np.inf
     return lp + lnlike(theta, x, y, yerr, transit_params)
@@ -493,7 +503,8 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     while len(pos) < nwalkers:
         realization = fit_params + 1e-5*np.random.randn(ndim)
 
-        if lnprior(realization, fluxes, lower_t_bound, upper_t_bound) == 0.0:
+        if not np.isinf(lnprior(realization, fluxes, lower_t_bound,
+                                upper_t_bound, transit_params)):
             pos.append(realization)
 
     print('Begin MCMC...')

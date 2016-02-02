@@ -24,6 +24,10 @@ elif os.path.exists('/usr/lusers/bmmorris/data/kepler17/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/kepler17/*slc.fits')
     output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/k17')
+elif os.path.exists('/local/tmp/kepler17'):
+    # on Hyak
+    light_curve_paths = glob('/local/tmp/kepler17/*slc.fits')
+    output_dir = os.path.abspath('./')
 
 else:
     raise ValueError('No input files found.')
@@ -63,7 +67,7 @@ residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   transit_params, n_peaks=4, plots=False,
+                                   transit_params, n_peaks=4, plots=True,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
                                            best_fit_spot_params)
@@ -75,4 +79,4 @@ if best_fit_spot_params is not None:
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
                                n_steps=10000, n_walkers=200, n_threads=32,
                                output_path=output_path, burnin=0.5,
-                               n_extra_spots=2)
+                               n_extra_spots=1)

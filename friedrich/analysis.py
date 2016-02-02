@@ -6,7 +6,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 from .fitting import spotted_transit_model, spotted_transit_model_individuals, generate_lc
 from .storage import read_results_archive
-from .lightcurve import TransitLightCurve, hat11_params_morris
+from .lightcurve import TransitLightCurve
 from .orientation import (planet_position_cartesian, observer_view_to_stellar_view,
                           cartesian_to_spherical, spherical_to_latlon,
                           project_planet_to_stellar_surface)
@@ -124,7 +124,6 @@ class MCMCResults(object):
 
         time = self.chains[:, 2]
         #corner(self.chains[:, 2::3])
-        self.transit_params = hat11_params_morris()
         X, Y, Z = planet_position_cartesian(time, self.transit_params)
         spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
         spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params, time)
@@ -153,7 +152,6 @@ class MCMCResults(object):
     def plot_star(self):
 
         thetas = np.linspace(0, 2*np.pi, 10000)
-        self.transit_params = hat11_params_morris() # pysyzygy_example()  #  #
         #self.transit_params.inc = 87.0
 
         t0 = self.lc.times.jd.mean()
@@ -260,7 +258,7 @@ class MCMCResults(object):
             longitude = spot_theta
             latitude = np.pi/2 - spot_phi
 
-            alpha = np.median(amplitude)/self.transit_params.rp**2/5
+            alpha = np.median(amplitude)/self.transit_params.rp**2/25
             radius = 2*self.transit_params.rp  # from s=r*theta
             plot_tissot_ellipse(longitude, latitude, radius, ax=ax, linewidth=0,
                                 fc=colors[i], alpha=alpha)

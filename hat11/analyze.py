@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 # plt.savefig('tmp/{0:03d}.png'.format(int(sys.argv[1])))
 # #plt.show()
 
-archive_paths = sorted(glob('/local/tmp/friedrich/chains???.hdf5'))
+archive_paths = sorted(glob('/local/tmp/friedrich/k17/chains???.hdf5'))
 #archive_paths = ['/local/tmp/friedrich/chains033.hdf5']
 for archive_path in archive_paths:
     m = MCMCResults(archive_path)
