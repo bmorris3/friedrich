@@ -79,11 +79,11 @@ python {run_script} {transit_number}
 """
 
 def launch_hyak_run(n_transits, run_script, job_name='friedrich',
+                    run_dir='/gscratch/stf/bmmorris/friedrich/',
                     log_dir='/gscratch/stf/bmmorris/friedrich/logs',
                     submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
     for i in range(n_transits):
-        run_dir = log_dir
         walltime = '01:00:00'
         email = 'bmmorris@uw.edu'
 
