@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-sys.path.insert(0, '../')
-#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+#sys.path.insert(0, '../')
+sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, k17_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
