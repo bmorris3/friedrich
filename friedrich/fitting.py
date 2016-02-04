@@ -403,15 +403,25 @@ def spotted_transit_model(theta, times, transit_params):
     f : `numpy.ndarray`
         Model fluxes
     """
+
     depth, spot_params = theta[0], theta[1:]
 
     # Copy initial transit parameters
     transit_params_tmp = deepcopy(transit_params)
     # Set depth according to input parameters, compute transit model
     transit_params_tmp.rp = depth**0.5
+    lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params_tmp, duration_fraction=1.0)
     transit_model = generate_lc(times, transit_params_tmp)
     spot_model = summed_gaussians(times, spot_params)
-    return transit_model + spot_model
+
+    # Sum the models only where planet is in transit
+    transit_plus_spot_model = transit_model
+    in_transit_times = (times < upper_t_bound) & (times > lower_t_bound)
+    transit_plus_spot_model[in_transit_times] += spot_model[in_transit_times]
+
+    # Force all model fluxes <=1
+    transit_plus_spot_model[transit_plus_spot_model > 1] = 1.0
+    return transit_plus_spot_model
 
 
 def spotted_transit_model_individuals(theta, times, transit_params):
@@ -442,10 +452,9 @@ def spotted_transit_model_individuals(theta, times, transit_params):
 
     split_spot_params = np.split(spot_params, len(spot_params)/3)
 
-    transit_model = generate_lc(times, transit_params_tmp)
-    return [transit_model + summed_gaussians(times, spot_params)
+    return [spotted_transit_model(np.concatenate([[depth], spot_params]),
+                                                  times, transit_params)
             for spot_params in split_spot_params]
-
 
 def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
                      n_walkers, n_threads, output_path, burnin=0.7,

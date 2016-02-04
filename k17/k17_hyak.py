@@ -9,6 +9,7 @@ import os
 # Import dev version of friedrich:
 import sys
 sys.path.insert(0, '../')
+#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, k17_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -25,7 +26,7 @@ elif os.path.exists('/usr/lusers/bmmorris/data/kepler17/'):
     light_curve_paths = glob('/usr/lusers/bmmorris/data/kepler17/*slc.fits')
     output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/k17')
 elif os.path.exists('/local/tmp/kepler17'):
-    # on Hyak
+    # on mist
     light_curve_paths = glob('/local/tmp/kepler17/*slc.fits')
     output_dir = os.path.abspath('./')
 
@@ -67,7 +68,7 @@ residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   transit_params, n_peaks=4, plots=True,
+                                   transit_params, n_peaks=4, plots=False,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
                                            best_fit_spot_params)
@@ -77,6 +78,6 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
-                               n_steps=10000, n_walkers=200, n_threads=32,
+                               n_steps=10000, n_walkers=200, n_threads=16,
                                output_path=output_path, burnin=0.5,
                                n_extra_spots=1)

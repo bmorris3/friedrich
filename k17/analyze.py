@@ -25,16 +25,16 @@ import matplotlib.pyplot as plt
 # plt.savefig('tmp/{0:03d}.png'.format(int(sys.argv[1])))
 # #plt.show()
 
-# archive_paths = sorted(glob('/local/tmp/friedrich/k17/chains???.hdf5'))
-archive_paths = ['/local/tmp/friedrich/k17/chains033.hdf5']
+archive_paths = sorted(glob('/local/tmp/friedrich/k17/chains???.hdf5'))
+#archive_paths = ['chains017.hdf5']
 for archive_path in archive_paths:
     m = MCMCResults(archive_path, k17_params_morris())
-    #m.plot_star_projected()
-    m.plot_corner()
-    m.plot_lnprob()
-
+    m.plot_star_projected()
+    #m.plot_corner()
+    #m.plot_lnprob()
+    # m.plot_max_lnp_lc()
     transit_number = m.index.split('chains')[1]
-    # plt.savefig('tmp/{0:03d}.png'.format(int(transit_number)))
-    plt.show()
-    # plt.close()
+    plt.savefig('tmp/{0:03d}.png'.format(int(transit_number)))
+    # plt.show()
+    plt.close()
 #plt.show()

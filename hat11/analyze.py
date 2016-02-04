@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division, print_function,
 import sys
 sys.path.insert(0, '../')
 from friedrich.analysis import MCMCResults
+from friedrich.lightcurve import hat11_params_morris
 from glob import glob
 import matplotlib.pyplot as plt
 
@@ -24,13 +25,13 @@ import matplotlib.pyplot as plt
 # plt.savefig('tmp/{0:03d}.png'.format(int(sys.argv[1])))
 # #plt.show()
 
-archive_paths = sorted(glob('/local/tmp/friedrich/k17/chains???.hdf5'))
-#archive_paths = ['/local/tmp/friedrich/chains033.hdf5']
+#archive_paths = sorted(glob('/local/tmp/friedrich/k17/chains???.hdf5'))
+archive_paths = ['chains033.hdf5']
 for archive_path in archive_paths:
-    m = MCMCResults(archive_path)
+    m = MCMCResults(archive_path, hat11_params_morris())
     m.plot_star_projected()
     transit_number = m.index.split('chains')[1]
-    plt.savefig('tmp/{0:03d}.png'.format(int(transit_number)))
-    #plt.show()
-    plt.close()
+    # plt.savefig('tmp/{0:03d}.png'.format(int(transit_number)))
+    plt.show()
+    # plt.close()
 #plt.show()
