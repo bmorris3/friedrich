@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-sys.path.insert(0, '../')
-#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+#sys.path.insert(0, '../')
+sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, hat11_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -24,7 +24,7 @@ if os.path.exists('/Users/bmmorris/data/hat11/'):
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11')
 elif os.path.exists('/local/tmp/hat11'):
     # on mist
     light_curve_paths = glob('/local/tmp/hat11/*slc.fits')
@@ -78,12 +78,7 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, hat11_params, best_fit_spot_params,
-                               # n_steps=10000, n_walkers=200, n_threads=16,
-                               n_steps=100, n_walkers=50, n_threads=16,
+                               n_steps=10000, n_walkers=200, n_threads=16,
                                output_path=output_path, burnin=0.5,
                                n_extra_spots=1)
 
-    import corner
-    import matplotlib.pyplot as plt
-    corner.corner(sampler.flatchain)
-    plt.show()
