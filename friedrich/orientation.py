@@ -412,6 +412,27 @@ def observer_view_to_stellar_view(x, y, z, transit_params, times,
     return x_p, y_p, z_p
 
 
+def observer_view_to_stsp_view(x, y, z, transit_params, times):
+    """
+    First rotate to remove lambda (rotation about z-axis). Then rotate to
+    remove i_s (rotation about x-axis). Then rotate one last time to remove
+    stellar rotation with time (rotation about z-axis again) by using STSP's
+    convention that the longitude=0 is centered on the star at mid-transit
+
+    """
+
+    i_star = np.radians(transit_params.inc_stellar)
+    lam_star = np.radians(transit_params.lam)
+    per_rot = transit_params.per_rot
+    t_mean = np.mean(times)
+
+    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
+                             alpha=-i_star),
+                        alpha=(-np.pi -2*np.pi/per_rot *
+                               ((t_mean - transit_params.t0) % per_rot)))
+    return x_p, y_p, z_p
+
+
 def get_lat_lon_grid(n_points, transit_params, transit_view=True):
     """
 

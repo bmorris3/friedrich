@@ -12,7 +12,7 @@ from .orientation import (planet_position_cartesian, observer_view_to_stellar_vi
                           project_planet_to_stellar_surface)
 from .orientation import (true_anomaly, plot_lat_lon_gridlines, observer_view_to_stellar_view,
                           unit_circle, cartesian_to_spherical, spherical_to_cartesian,
-                          get_lat_lon_grid, times_to_occulted_lat_lon)
+                          get_lat_lon_grid, times_to_occulted_lat_lon, observer_view_to_stsp_view)
 
 from astroML.plotting import plot_tissot_ellipse
 
@@ -283,6 +283,31 @@ class MCMCResults(object):
 
         ax2.set_xlabel('JD - {0}'.format(min_jd_int))
         ax2.set_ylabel('Flux')
+
+    def max_lnp_theta_phi(self):
+        spot_times = self.best_params[2::3]
+        X, Y, Z = planet_position_cartesian(spot_times, self.transit_params)
+        spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params,
+                                                                     spot_times)
+        spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+
+        for t, p in zip(spot_theta, spot_phi):
+            print("theta={0}, phi={1}\n".format(t, p))
+
+    def max_lnp_theta_phi_stsp(self):
+        spot_times = self.best_params[2::3]
+        X, Y, Z = planet_position_cartesian(spot_times, self.transit_params)
+        spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x, spot_y, spot_z, self.transit_params,
+                                                                     spot_times)
+        spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+
+#        for t, p in zip(spot_theta, spot_phi):
+#            print("theta_stsp={0}, phi_stsp={1}\n".format(p, t))
+        stsp_thetas = spot_phi
+        stsp_phis = spot_theta
+        return stsp_thetas, stsp_phis
 
 
 class Measurement(object):

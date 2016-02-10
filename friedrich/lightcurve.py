@@ -127,9 +127,9 @@ def k17_params_morris():
 
     # Required by some friedrich methods below but not by batman:
     params.duration = dur
-    params.lam = 0.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.inc_stellar = 90     # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.per_rot = 29.984     # Morris periodogram days
+    params.lam = 0.0
+    params.inc_stellar = 90
+    params.per_rot = 29.984#11.9
     return params
 
 
