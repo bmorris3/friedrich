@@ -58,7 +58,7 @@ transit_number = int(sys.argv[1])
 
 lc = transits[transit_number]
 lc.delete_outliers()
-lc.subtract_polynomial_baseline(order=4, params=hat11_params)
+lc.subtract_polynomial_baseline(order=2, params=hat11_params)
 lc.fluxes += quarterly_maxes[lc.quarters[0]]
 lc.fluxes /= quarterly_maxes[lc.quarters[0]]
 lc.errors /= quarterly_maxes[lc.quarters[0]]

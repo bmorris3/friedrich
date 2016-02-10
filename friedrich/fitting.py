@@ -12,7 +12,8 @@ from scipy import optimize, signal
 import matplotlib.pyplot as plt
 import batman
 from copy import deepcopy
-
+from emcee.utils import MPIPool
+import sys
 
 def gaussian(times, amplitude, t0, sigma):
     """
@@ -517,13 +518,17 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
             pos.append(realization)
 
     print('Begin MCMC...')
-    pool = emcee.interruptible_pool.InterruptiblePool(processes=n_threads)
+    # pool = emcee.interruptible_pool.InterruptiblePool(processes=n_threads)
+    pool = MPIPool()
+    if not pool.is_master():
+        pool.wait()
+        sys.exit(0)
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(times, fluxes, errors, lower_t_bound,
                                           upper_t_bound, transit_params),
                                     pool=pool)
     sampler.run_mcmc(pos, n_steps)
-
+    pool.close()
     print('Finished MCMC...')
     burnin_len = int(burnin*n_steps)
 
