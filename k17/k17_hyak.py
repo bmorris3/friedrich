@@ -57,6 +57,7 @@ for i, quarter_number, lc in zip(range(len(available_quarters)),
 # Read from command line argument
 transit_number = int(sys.argv[1])
 lc = transits[transit_number]
+lc.delete_outliers()
 lc.subtract_polynomial_baseline(order=4, params=transit_params)
 lc.fluxes += quarterly_maxes[lc.quarters[0]]
 lc.fluxes /= quarterly_maxes[lc.quarters[0]]

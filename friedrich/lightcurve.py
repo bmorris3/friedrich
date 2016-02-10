@@ -370,6 +370,20 @@ class LightCurve(object):
         if rename is not None:
             self.name = rename
 
+    def delete_outliers(self):
+
+        d = np.diff(self.fluxes)
+        spikey = np.abs(d - np.median(d)) > 2.5*np.std(d)
+        neighboring_spikes = spikey[1:] & spikey[:-1]
+        opposite_signs = np.sign(d[1:]) != np.sign(d[:-1])
+        outliers = np.argwhere(neighboring_spikes & opposite_signs) + 1
+        #print('number bad fluxes: {0}'.format(len(outliers)))
+
+        self.times = Time(np.delete(self.times.jd, outliers), format='jd')
+        self.fluxes = np.delete(self.fluxes, outliers)
+        self.errors = np.delete(self.errors, outliers)
+        self.quarters = np.delete(self.quarters, outliers)
+
     def mask_out_of_transit(self, params, oot_duration_fraction=0.25,
                             flip=False):
         """
