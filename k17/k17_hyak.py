@@ -79,6 +79,6 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
-                               n_steps=10000, n_walkers=200, n_threads=16,
+                               n_steps=10000, n_walkers=200,
                                output_path=output_path, burnin=0.5,
                                n_extra_spots=1)

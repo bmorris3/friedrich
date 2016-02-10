@@ -31,7 +31,7 @@ submit_template = """#!/bin/bash
 #PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=8,mem=12gb,feature=intel,feature=16core
+#PBS -l nodes=1:ppn=8,mem=12gb,feature=intel,feature=8core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
@@ -93,11 +93,7 @@ ulimit -v $MEMPERTASK
 ## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
-## mpirun -np $HYAK_NPE python {run_script} {transit_number}
-
 mpiexec.hydra -n $HYAK_NPE python {run_script} {transit_number}
-
-## python {run_script} {transit_number}
 """
 
 def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',

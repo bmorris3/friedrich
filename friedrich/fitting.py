@@ -458,7 +458,7 @@ def spotted_transit_model_individuals(theta, times, transit_params):
             for spot_params in split_spot_params]
 
 def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
-                     n_walkers, n_threads, output_path, burnin=0.7,
+                     n_walkers, output_path, burnin=0.7,
                      n_extra_spots=1):
     """
     Fit for transit depth and spot parameters given initial guess informed by
@@ -477,8 +477,6 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     n_walkers : int
         Number of MCMC walkers to initialize (must be even, more than twice the
         number of free params in fit)
-    n_threads : int
-        Number of CPU threads to launch in pool for `emcee`
     output_path : str
         Path to HDF5 archive output for storing results
     burnin : float
@@ -518,18 +516,20 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
             pos.append(realization)
 
     print('Begin MCMC...')
-    # pool = emcee.interruptible_pool.InterruptiblePool(processes=n_threads)
+
     pool = MPIPool(loadbalance=True)
     if not pool.is_master():
         pool.wait()
         sys.exit(0)
+
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(times, fluxes, errors, lower_t_bound,
                                           upper_t_bound, transit_params),
                                     pool=pool)
     sampler.run_mcmc(pos, n_steps)
-    pool.close()
     print('Finished MCMC...')
+    pool.close()
+
     burnin_len = int(burnin*n_steps)
 
     from .storage import create_results_archive
