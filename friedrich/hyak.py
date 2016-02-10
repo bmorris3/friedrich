@@ -48,6 +48,7 @@ submit_template = """#!/bin/bash
 
 ## LOAD any appropriate environment modules and variables
 ## module load git_2.4.4
+module load gcc_4.4.7-impi_5.1.2
 
 ## --------------------------------------------------------
 ## DEBUGGING information (include jobs logs in any help requests)
@@ -75,7 +76,9 @@ echo "== END DEBUGGING INFORMATION  ========================"
 ## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
-python {run_script} {transit_number}
+mpirun -np 16 {run_script} {transit_number}
+
+## python {run_script} {transit_number}
 """
 
 def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
