@@ -300,8 +300,8 @@ class LightCurve(object):
             data = fits.getdata(path)
             header = fits.getheader(path)
             times.append(data['TIME'] + 2454833.0)
-            errors.append(data['PDCSAP_FLUX_ERR'])
-            fluxes.append(data['PDCSAP_FLUX'])
+            errors.append(data['SAP_FLUX_ERR'])
+            fluxes.append(data['SAP_FLUX'])
             quarter.append(len(data['TIME'])*[header['QUARTER']])
 
         times, fluxes, errors, quarter = [np.concatenate(i)
