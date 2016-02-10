@@ -42,6 +42,14 @@ submit_template = """#!/bin/bash
 ## EMAIL to send when job is aborted, begins, and terminates
 #PBS -m abe -M {email}
 
+## Some applications, particularly FORTRAN applications require
+##  a larger than usual data stack size. Uncomment if your
+##  application is exiting unexpectedly.
+#ulimit -s unlimited
+
+## Disable regcache
+export MX_RCACHE=0
+
 ## --------------------------------------------------------
 ## END of PBS commands ... only BASH from here and below
 ## --------------------------------------------------------
@@ -50,22 +58,24 @@ submit_template = """#!/bin/bash
 ## module load git_2.4.4
 module load gcc_4.4.7-impi_5.1.2
 
-## --------------------------------------------------------
-## DEBUGGING information (include jobs logs in any help requests)
-## --------------------------------------------------------
-## Total Number of nodes and processors (cores) to be used by the job
-echo "== JOB DEBUGGING INFORMATION=========================="
-HYAK_NNODES=$(uniq $PBS_NODEFILE | wc -l )
+### Debugging information
+### Include your job logs which contain output from the below commands
+###  in any job-related help requests.
+# Total Number of processors (cores) to be used by the job
 HYAK_NPE=$(wc -l < $PBS_NODEFILE)
-echo "This job will run on $HYAK_NNODES nodes with $HYAK_NPE total CPU-cores"
+# Number of nodes used
+HYAK_NNODES=$(uniq $PBS_NODEFILE | wc -l )
+echo "**** Job Debugging Information ****"
+echo "This job will run on $HYAK_NPE total CPUs on $HYAK_NNODES different nodes"
 echo ""
 echo "Node:CPUs Used"
-uniq -c $PBS_NODEFILE | awk '{{print $2 ":" $1}}'
-echo ""
+uniq -c $PBS_NODEFILE | awk '{print $2 ":" $1}'
+echo "SHARED LIBRARY CHECK"
+echo "[skipped]"
 echo "ENVIRONMENT VARIABLES"
 set
-echo ""
-echo "== END DEBUGGING INFORMATION  ========================"
+echo "**********************************************"
+### End Debugging information
 
 
 ## --------------------------------------------------------
@@ -76,7 +86,7 @@ echo "== END DEBUGGING INFORMATION  ========================"
 ## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
-mpirun -np 8 {run_script} {transit_number}
+mpirun -np $HYAK_NPE python {run_script} {transit_number}
 
 ## python {run_script} {transit_number}
 """
