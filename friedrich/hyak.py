@@ -31,7 +31,7 @@ submit_template = """#!/bin/bash
 #PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=8,mem=12gb,feature=intel
+#PBS -l nodes=1:ppn=8,mem=12gb,feature=intel,feature=16core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
@@ -55,7 +55,6 @@ export MX_RCACHE=0
 ## --------------------------------------------------------
 
 ## LOAD any appropriate environment modules and variables
-## module load git_2.4.4
 module load gcc_4.4.7-impi_5.1.2
 
 ### Debugging information
@@ -77,6 +76,13 @@ set
 echo "**********************************************"
 ### End Debugging information
 
+# Prevent tasks from exceeding the total RAM of the node
+# Requires HYAK_NPE and HYAK_NNODE or HYAK_TPN to be set.
+HYAK_TPN=$((HYAK_NPE/HYAK_NNODES))
+NODEMEM=`grep MemTotal /proc/meminfo | awk '{{print $2}}'`
+NODEFREE=$((NODEMEM-2097152))
+MEMPERTASK=$((NODEFREE/HYAK_TPN))
+ulimit -v $MEMPERTASK
 
 ## --------------------------------------------------------
 ## RUN your specific applications/scripts/code here
@@ -86,7 +92,9 @@ echo "**********************************************"
 ## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
-mpirun -np $HYAK_NPE python {run_script} {transit_number}
+## mpirun -np $HYAK_NPE python {run_script} {transit_number}
+
+mpiexec.hydra -n $HYAK_NPE python {run_script} {transit_number}
 
 ## python {run_script} {transit_number}
 """

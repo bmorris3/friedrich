@@ -519,7 +519,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
 
     print('Begin MCMC...')
     # pool = emcee.interruptible_pool.InterruptiblePool(processes=n_threads)
-    pool = MPIPool()
+    pool = MPIPool(loadbalance=True)
     if not pool.is_master():
         pool.wait()
         sys.exit(0)
