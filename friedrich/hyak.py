@@ -69,7 +69,7 @@ echo "**** Job Debugging Information ****"
 echo "This job will run on $HYAK_NPE total CPUs on $HYAK_NNODES different nodes"
 echo ""
 echo "Node:CPUs Used"
-uniq -c $PBS_NODEFILE | awk '{print $2 ":" $1}'
+uniq -c $PBS_NODEFILE | awk '{{print $2 ":" $1}}'
 echo "SHARED LIBRARY CHECK"
 echo "[skipped]"
 echo "ENVIRONMENT VARIABLES"
