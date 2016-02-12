@@ -31,7 +31,7 @@ submit_template = """#!/bin/bash
 #PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=8,mem=12gb,feature=intel,feature=8core
+#PBS -l nodes=1:ppn=12,mem=12gb,feature=intel,feature=12core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
@@ -101,7 +101,7 @@ def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
                     submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
     for i in range(n_transits):
-        walltime = '01:00:00'
+        walltime = '04:00:00'
         email = 'bmmorris@uw.edu'
 
         transit_number = str(i)
