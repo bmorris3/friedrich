@@ -31,7 +31,7 @@ submit_template = """#!/bin/bash
 #PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=12,mem=12gb,feature=intel,feature=12core
+#PBS -l nodes=1:ppn=16,mem=20gb,feature=intel,feature=16core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
@@ -115,8 +115,11 @@ def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
                                                run_script=run_script,
                                                transit_number=transit_number)
 
-        submit_script_path = os.path.join(submit_script_dir, submit_script_name)
-        with open(submit_script_path, 'w') as f:
-            f.write(submit_script)
+        output_file_name = '/gscratch/stf/bmmorris/friedrich/hat11/chains{0:03d}.hdf5'.format(i)
+        if not os.path.exists(output_file_name):
 
-        os.system('qsub {0}'.format(submit_script_path))
+            submit_script_path = os.path.join(submit_script_dir, submit_script_name)
+            with open(submit_script_path, 'w') as f:
+                f.write(submit_script)
+            #print('qsub {0}'.format(submit_script_path))
+            os.system('qsub {0}'.format(submit_script_path))
