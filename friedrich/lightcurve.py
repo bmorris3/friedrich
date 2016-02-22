@@ -129,7 +129,7 @@ def k17_params_morris():
     params.duration = dur
     params.lam = 0.0
     params.inc_stellar = 90
-    params.per_rot = 29.984#11.9
+    params.per_rot = 12.04
     return params
 
 

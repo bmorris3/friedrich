@@ -56,6 +56,7 @@ for i, quarter_number, lc in zip(range(len(available_quarters)),
 
 # Read from command line argument
 transit_number = int(sys.argv[1])
+print('Transit number: {0}'.format(transit_number))
 lc = transits[transit_number]
 lc.delete_outliers()
 lc.subtract_polynomial_baseline(order=2, params=transit_params)
@@ -79,6 +80,6 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
-                               n_steps=15000, n_walkers=150,
+                               n_steps=15000, n_walkers=100,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=1)
