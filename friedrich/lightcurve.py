@@ -71,24 +71,23 @@ def hat11_params_morris():
     omega = np.degrees(np.arctan2(esinw, ecosw))
 
     params = batman.TransitParams()
-    params.t0 = 2454605.89159720   # time of inferior conjunction
-    params.per = 4.88780233        # orbital period
-    params.rp = 0.00343**0.5       # planet radius (in units of stellar radii)
-    #b = 0.127                      # impact parameter
-    dur = 0.0982                   # transit duration
-    params.inc = 89.4234790468     # orbital inclination (in degrees)
+    params.t0 = 2454605.8914656607   # time of inferior conjunction
+    params.per = 4.887802573        # orbital period
+    params.rp = 0.0583329       # planet radius (in units of stellar radii)
+    params.b = 0.14505919          # impact parameter
+    params.inc = 89.3395911     # orbital inclination (in degrees)
 
     params.ecc = eccentricity      # eccentricity
     params.w = omega              # longitude of periastron (in degrees)
-    params.a = 14.7663717          # semi-major axis (in units of stellar radii)
-    params.u = [0.5636, 0.1502]    # limb darkening coefficients
+    params.a = 14.7677773         # semi-major axis (in units of stellar radii)
+    params.u = [0.640416, 0.048367]    # limb darkening coefficients
     params.limb_dark = "quadratic" # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
-    params.duration = dur
+    params.duration = 0.0979731                   # transit duration
     params.lam = 106.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.inc_stellar = 80     # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.per_rot = 29.984     # Morris periodogram days
+    params.per_rot = 29.19412     # Morris periodogram days
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
@@ -112,24 +111,23 @@ def k17_params_morris():
     omega = np.degrees(np.arctan2(sqrt_e_sinw, sqrt_e_cosw))
 
     params = batman.TransitParams()
-    params.t0 = 2455185.67863     # time of inferior conjunction
-    params.per = 1.48571118         # orbital period
-    params.rp = 0.01732**0.5            # planet radius (in units of stellar radii)
-    b = 0.115                      # impact parameter
-    dur = 0.0948                  # transit duration
-    params.inc = 88.92684              # orbital inclination (in degrees)
+    params.t0 = 2455185.6781621235   # time of inferior conjunction
+    params.per = 1.485712100         # orbital period
+    params.rp = 0.1311685300            # planet radius (in units of stellar radii)
+    params.b = 0.0596577                      # impact parameter
+    params.inc = 89.4046440              # orbital inclination (in degrees)
 
     params.ecc = eccentricity      # eccentricity
     params.w = omega               # longitude of periastron (in degrees)
-    params.a = 5.661768                # semi-major axis (in units of stellar radii)
-    params.u = [0.40368, 0.25764]      # limb darkening coefficients
+    params.a = 5.701029    # semi-major axis (in units of stellar radii)
+    params.u = [0.3246, 0.4103]      # limb darkening coefficients
     params.limb_dark = "quadratic" # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
-    params.duration = dur
+    params.duration = 0.0950        # transit duration
     params.lam = 0.0
     params.inc_stellar = 90
-    params.per_rot = 12.04
+    params.per_rot = 12.04345
     return params
 
 
