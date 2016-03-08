@@ -82,7 +82,9 @@ def planet_position_cartesian(times, transit_params):
         Y sky-plane position
     .. [1] http://arxiv.org/abs/1001.2010
     """
+
     f = true_anomaly(times, transit_params)
+
     r = r_orbit(f, transit_params)
     w = np.radians(transit_params.w) # This pi offset was required by Rodrigo also
     i = np.radians(transit_params.inc)
@@ -118,7 +120,7 @@ def true_anomaly(times, transit_params):
     """
     sort = np.argsort(times)
     unsort = np.argsort(sort)
-    times_sorted = times[sort]
+    times_sorted = np.array(times)[sort]
 
     m = batman.TransitModel(transit_params, times_sorted)
     f = m.get_true_anomaly()[unsort]
@@ -418,17 +420,19 @@ def observer_view_to_stsp_view(x, y, z, transit_params, times):
     remove i_s (rotation about x-axis). Then rotate one last time to remove
     stellar rotation with time (rotation about z-axis again) by using STSP's
     convention that the longitude=0 is centered on the star at mid-transit
-
     """
 
     i_star = np.radians(transit_params.inc_stellar)
     lam_star = np.radians(transit_params.lam)
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
-
+    print('z rot: {0}'.format(- 2*np.pi/per_rot *((t_mean - transit_params.t0) % per_rot)))
     x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
                              alpha=-i_star),
-                        alpha=(-np.pi -2*np.pi/per_rot *
+#first                            alpha=(-2*np.pi/per_rot * # -np.pi
+#second                        alpha=(-np.pi - 2*np.pi/per_rot *
+#third                             alpha=(np.pi - 2*np.pi/per_rot *
+                             alpha=(-2*np.pi/per_rot * # -np.pi
                                ((t_mean - transit_params.t0) % per_rot)))
     return x_p, y_p, z_p
 
@@ -487,6 +491,7 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
 
 def times_to_occulted_lat_lon(times, transit_params):
+    """Only works for single time inputs at the moment"""
     X, Y, Z = planet_position_cartesian(times, transit_params)
     spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
     spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y,
@@ -494,7 +499,6 @@ def times_to_occulted_lat_lon(times, transit_params):
                                                                  transit_params,
                                                                  times)
     spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
-
     longitude = spot_theta
     latitude = np.pi/2 - spot_phi
     return latitude, longitude

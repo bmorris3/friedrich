@@ -4,6 +4,8 @@ Methods for analyzing results from `friedrich.fitting.run_emcee_seeded`.
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+from copy import deepcopy
+
 from .fitting import spotted_transit_model, spotted_transit_model_individuals, generate_lc
 from .storage import read_results_archive
 from .lightcurve import TransitLightCurve
@@ -111,6 +113,193 @@ class MCMCResults(object):
         ax[1].set_xlabel('JD - {0}'.format(min_jd_int))
         ax[1].set_ylabel('Residuals')
         ax[0].set_ylabel('Flux')
+
+
+    def get_spots_delta_chi2(self, plots=True):
+
+        # Sort spot properties by amplitude (as proxy for robustness)
+        depth, spot_params = self.best_params[0], self.best_params[1:]
+        split_spot_params = np.split(spot_params, len(spot_params)/3)
+        spots = [Spot(amplitude=single_spot_params[0], t0=single_spot_params[1],
+                      sigma=single_spot_params[2])
+                 for single_spot_params in split_spot_params]
+
+        spots = sorted(spots, key=lambda spot: -spot.amplitude)
+
+        amp_sorted_best_params = [self.best_params[0]]
+        cumulative_spot_params = [[self.best_params[0]] for i in range(len(spots))]
+        for i, spot in enumerate(spots):
+            amp_sorted_best_params.extend([spot.amplitude, spot.t0, spot.sigma])
+            for j in range(i, len(spots)):
+                    cumulative_spot_params[j].extend([spot.amplitude, spot.t0, spot.sigma])
+
+        cumulative_models = [spotted_transit_model(spot_params, self.lc.times.jd,
+                                                   self.transit_params)
+                             for spot_params in cumulative_spot_params]
+
+        individual_models = spotted_transit_model_individuals(np.array(amp_sorted_best_params),
+                                                              self.lc.times.jd,
+                                                              self.transit_params)
+
+        transit_params_tmp = deepcopy(self.transit_params)
+        transit_params_tmp.rp = self.best_params[0]**0.5
+        no_spots_model = generate_lc(self.lc.times.jd, transit_params_tmp)
+
+        spot_colors = ['#0079a3', '#41ad49', '#dcc455', '#f4931f', '#58595b']
+
+        if plots:
+            fig, ax = plt.subplots(2, 2, figsize=(14, 10), sharex='col')
+            # original goldenrod: #f5da5f
+            ax[0, 1].plot(self.lc.times.jd, cumulative_models[-1],
+                          color='k', lw=2, alpha=0.6)
+            ax[0, 1].plot(self.lc.times.jd, self.lc.fluxes, 'k.')
+            ax[1, 1].plot(self.lc.times.jd,
+                          (self.lc.fluxes - cumulative_models[-1])/self.best_params[0],
+                          'k.')
+
+            for indiv_model, c in zip(individual_models, spot_colors):
+                ax[0, 1].fill_between(self.lc.times.jd, indiv_model, no_spots_model,
+                                      color=c, alpha=0.4)
+                ax[1, 1].fill_between(self.lc.times.jd,
+                                      (indiv_model - no_spots_model)/self.best_params[0],
+                                      0, color=c, alpha=0.4)
+
+        delta_chi2s = np.zeros(len(cumulative_models))
+        cumulative_BICs = np.zeros(len(cumulative_models))
+        delta_BICs = np.zeros(len(cumulative_models))
+
+        for i, n_spot_model, spot_params, c in zip(range(len(cumulative_spot_params)),
+                                                   cumulative_models, cumulative_spot_params,
+                                                   spot_colors):
+            chi2_no_spot = np.sum((no_spots_model - self.lc.fluxes)**2 /
+                                  self.lc.errors**2)
+            chi2_spot = np.sum((n_spot_model - self.lc.fluxes)**2 /
+                                  self.lc.errors**2)
+
+            bic_no_spot = chi2_no_spot + 1*np.log(len(self.lc.fluxes))
+            bic_spot = chi2_spot + (len(spot_params) + 1)*np.log(len(self.lc.fluxes))
+            cumulative_BICs[i] = bic_spot
+            delta_chi2s[i] = np.abs(chi2_no_spot - chi2_spot)
+
+            # Check  improvement with each added spot
+            if i == 0:
+                delta_BICs[i] = np.abs(bic_no_spot - bic_spot)
+            else:
+                delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
+
+            style_kwargs = {}
+            if delta_BICs[i] <= 10:
+                style_kwargs['lw'] = 3
+                style_kwargs['ls'] = '--'
+                style_kwargs['alpha'] = 0.5
+
+            if plots:
+                ax[0, 0].bar(i-0.5, delta_chi2s[i], 0.95, color=c, **style_kwargs)
+                ax[1, 0].bar(i-0.5, delta_BICs[i], 0.95, color=c, **style_kwargs)
+
+        if plots:
+            ax[0, 0].set(ylabel='$\Delta \chi^2$')
+            ax[1, 0].set(xlabel='Spot', ylabel='$\Delta$ BIC',
+                      xticks=range(len(cumulative_models)))
+            ax[0, 1].set(ylabel='Flux')
+            ax[1, 1].set(xlabel='JD', ylabel='residuals/depth')
+
+            fig.tight_layout()
+            ax[0, 1].set_title('{0}'.format(self.index))
+        return delta_BICs
+
+    def get_spots(self):
+
+        # Sort spot properties by amplitude (as proxy for robustness)
+
+        # Convert samples into spot measurements
+        results = np.percentile(self.chains, [15.87, 50, 84.13], axis=0)
+
+        spots = []
+        for spot in np.split(results[:, 1:].T, (self.chains.shape[1]-1)/3):
+            ampltiude, t0, sigma = map(lambda x: Measurement(*(x[1],
+                                                               x[2]-x[1],
+                                                               x[1]-x[0])),
+                                       spot)
+            spots.append(Spot(ampltiude, t0, sigma))
+
+        # depth, spot_params = self.best_params[0], self.best_params[1:]
+        # split_spot_params = np.split(spot_params, len(spot_params)/3)
+        # spots = [Spot(amplitude=single_spot_params[0], t0=single_spot_params[1],
+        #               sigma=single_spot_params[2])
+        #          for single_spot_params in split_spot_params]
+
+        spots = sorted(spots, key=lambda spot: -spot.amplitude.value)
+
+        amp_sorted_best_params = [self.best_params[0]]
+        cumulative_spot_params = [[self.best_params[0]] for i in range(len(spots))]
+        for i, spot in enumerate(spots):
+            amp_sorted_best_params.extend([spot.amplitude.value, spot.t0.value,
+                                           spot.sigma.value])
+            for j in range(i, len(spots)):
+                    cumulative_spot_params[j].extend([spot.amplitude.value,
+                                                      spot.t0.value,
+                                                      spot.sigma.value])
+
+        cumulative_models = [spotted_transit_model(spot_params, self.lc.times.jd,
+                                                   self.transit_params)
+                             for spot_params in cumulative_spot_params]
+
+        individual_models = spotted_transit_model_individuals(np.array(amp_sorted_best_params),
+                                                              self.lc.times.jd,
+                                                              self.transit_params)
+
+        transit_params_tmp = deepcopy(self.transit_params)
+        transit_params_tmp.rp = self.best_params[0]**0.5
+        no_spots_model = generate_lc(self.lc.times.jd, transit_params_tmp)
+
+        spot_colors = ['#0079a3', '#41ad49', '#dcc455', '#f4931f', '#58595b']
+
+        delta_chi2s = np.zeros(len(cumulative_models))
+        cumulative_BICs = np.zeros(len(cumulative_models))
+        delta_BICs = np.zeros(len(cumulative_models))
+
+        for i, n_spot_model, spot_params, c in zip(range(len(cumulative_spot_params)),
+                                                   cumulative_models, cumulative_spot_params,
+                                                   spot_colors):
+            chi2_no_spot = np.sum((no_spots_model - self.lc.fluxes)**2 /
+                                  self.lc.errors**2)
+            chi2_spot = np.sum((n_spot_model - self.lc.fluxes)**2 /
+                                  self.lc.errors**2)
+
+            bic_no_spot = chi2_no_spot + 1*np.log(len(self.lc.fluxes))
+            bic_spot = chi2_spot + (len(spot_params) + 1)*np.log(len(self.lc.fluxes))
+            cumulative_BICs[i] = bic_spot
+            delta_chi2s[i] = np.abs(chi2_no_spot - chi2_spot)
+
+            # Check  improvement with each added spot
+            if i == 0:
+                delta_BICs[i] = np.abs(bic_no_spot - bic_spot)
+            else:
+                delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
+
+            style_kwargs = {}
+            if delta_BICs[i] <= 10:
+                style_kwargs['lw'] = 3
+                style_kwargs['ls'] = '--'
+                style_kwargs['alpha'] = 0.5
+
+        spots_with_BICs = [Spot(spot.amplitude, spot.t0, spot.sigma, del_BIC)
+                           for spot, del_BIC in zip(spots, delta_BICs)]
+
+        return spots_with_BICs
+
+    def get_Transit(self):
+        results = np.percentile(self.chains, [15.87, 50, 84.13], axis=0)
+
+        spots = []
+        for spot in np.split(results[:, 1:].T, (self.chains.shape[1]-1)/3):
+            ampltiude, t0, sigma = map(lambda x: Measurement(*(x[1],
+                                                               x[2]-x[1],
+                                                               x[1]-x[0])),
+                                       spot)
+            spots.append(Spot(ampltiude, t0, sigma))
+        return Transit(spots)
 
 
     def plot_lat_lon(self):
@@ -307,6 +496,8 @@ class MCMCResults(object):
 #            print("theta_stsp={0}, phi_stsp={1}\n".format(p, t))
         stsp_thetas = spot_phi
         stsp_phis = spot_theta
+        # stsp_phis = spot_phi
+        # stsp_thetas = spot_theta
         return stsp_thetas, stsp_phis
 
 
@@ -328,10 +519,12 @@ class Spot(object):
     """
     Store collection of Measurements for spot parameters
     """
-    def __init__(self, amplitude, t0, sigma):
+    def __init__(self, amplitude, t0, sigma, delta_BIC=None, meta=None):
         self.amplitude = amplitude
         self.sigma = sigma
         self.t0 = t0
+        self.delta_BIC = delta_BIC
+        self.meta = meta
 
 
 class Transit(object):

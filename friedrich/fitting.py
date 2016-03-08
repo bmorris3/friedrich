@@ -245,7 +245,7 @@ def summed_gaussians(times, spot_parameters):
     model = np.zeros(len(times), dtype=np.float128)
 
     if spot_parameters is not None and len(spot_parameters) % 3 == 0:
-        split_input_parameters = np.split(spot_parameters,
+        split_input_parameters = np.split(np.array(spot_parameters),
                                           len(spot_parameters)/3)
         for amplitude, t0, sigma in split_input_parameters:
             model += gaussian(times, amplitude, t0, sigma)
