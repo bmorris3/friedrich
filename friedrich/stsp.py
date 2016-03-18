@@ -26,7 +26,7 @@ infile_template = """#PLANET PROPERTIES
 {esinw:2.10f}			; esinw
 #STAR PROPERTIES
 {rho_s:2.10f} 			; Mean Stellar density (Msun/Rsun^3)
-29.19412			; Stellar Rotation period (days)
+{per_rot:2.10f}			; Stellar Rotation period (days)
 4780					; Stellar Temperature
 0.31					; Stellar metallicity
 {tilt_from_z:d}						; Tilt of the rotation axis of the star down from z-axis (degrees)
@@ -34,7 +34,7 @@ infile_template = """#PLANET PROPERTIES
 {n_ld_rings:d}			; number of rings for limb darkening appoximation
 #SPOT PROPERTIES
 {n_spots}						; number of spots
-0.7						; fractional lightness of spots (0.0=total dark, 1.0=same as star)
+0.7					; fractional lightness of spots (0.0=total dark, 1.0=same as star)
 #LIGHT CURVE
 {model_path}			; lightcurve input data file
 {start_time:2.10f}		; start time to start fitting the light curve
@@ -102,8 +102,8 @@ class STSP(object):
         self.transit_params = transit_params
         self.spot_params = np.array(spot_params)
         if outdir is None:
-            self.outdir = os.path.join(os.path.dirname(__file__),
-                                       '.friedrich_tmp')
+            self.outdir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                       '.friedrich_tmp'))
         else:
             self.outdir = outdir
 
@@ -139,7 +139,7 @@ class STSP(object):
         np.savetxt(self.model_path,
                    np.vstack([times, fluxes,
                               fluxes]).T,
-                   fmt='%1.8f', delimiter='\t')
+                   fmt=str('%1.8f'), delimiter='\t')
 
         # Calculate parameters for STSP:
         eccentricity, omega = self.transit_params.ecc, self.transit_params.w
@@ -166,6 +166,7 @@ class STSP(object):
                                               start_time=start_time,
                                               lc_duration=lc_duration,
                                               real_max=real_max,
+                                              per_rot=self.transit_params.per_rot,
                                               rho_s=rho_star(self.transit_params),
                                               depth=self.transit_params.rp**2,
                                               duration=self.transit_params.duration,
@@ -174,7 +175,7 @@ class STSP(object):
                                               inclination=self.transit_params.inc,
                                               nonlinear_ld=nonlinear_ld_string,
                                               n_ld_rings=n_ld_rings,
-                                              spot_params=spot_params_str,
+                                              spot_params=spot_params_str[:-1],
                                               n_spots=int(len(self.spot_params)/3),
                                               model_path=os.path.basename(self.model_path))
 
@@ -185,8 +186,10 @@ class STSP(object):
         # Run STSP
         old_cwd = os.getcwd()
         os.chdir(self.outdir)
+        # stdout = subprocess.check_output([stsp_executable,
+        #                                   os.path.join(self.outdir, 'test.in')])
         stdout = subprocess.check_output([stsp_executable,
-                                          os.path.join(self.outdir, 'test.in')])
+                                          'test.in'])
         if verbose:
             print(stdout.decode('ascii'))
         os.chdir(old_cwd)

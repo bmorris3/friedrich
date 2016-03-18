@@ -62,7 +62,7 @@ def peak_finder_chi2(theta, x, y, yerr):
 
 
 def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
-                plots=False, verbose=False):
+                plots=False, verbose=False, skip_priors=False):
     """
     Find peaks in the residuals from a fit to a transit light curve, which
     correspond to starspot occultations.
@@ -163,7 +163,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
 
         trial_params = np.array([depth, amplitude, t0, sigma])
         if not np.isinf(lnprior(trial_params, residuals, lower_t_bound,
-                                upper_t_bound, transit_params)):
+                                upper_t_bound, transit_params, skip_priors)):
             result_in_transit.extend([amplitude, t0, np.abs(sigma)])
     result_in_transit = np.array(result_in_transit)
 
@@ -283,17 +283,20 @@ def get_in_transit_bounds(times, params, duration_fraction=0.9):
     return times[near_transit].min(), times[near_transit].max()
 
 
-def depth_prior(depth, transit_params):
+def depth_prior(depth, transit_params, y, skip_priors):
     """
     Since we're not actually interested in the depth, apply a non-physically
     motivated prior to the depth parameter, allowing it to vary by ~10% without
     significant penalty.
     """
     expected_depth = transit_params.rp**2
-    return -0.5*((depth - expected_depth)**2 / (0.1*expected_depth)**2)
+    if not skip_priors:
+        return -0.5*((depth - expected_depth)**2 / (0.1*expected_depth)**2)
+    else:
+        return -0.5*((depth - expected_depth)**2 / np.std(y)**2)
 
-
-def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params):
+def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
+            skip_priors):
     """
     Log prior for `emcee` runs.
 
@@ -307,6 +310,8 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params):
         Earliest in-transit time [JD]
     upper_t_bound : float
         Latest in-transit time [JD]
+    skip_priors : bool
+        Should the priors be skipped?
 
     Returns
     -------
@@ -319,18 +324,21 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params):
     t0s = spot_params[1::3]
     sigmas = spot_params[2::3]
 
-    amplitude_ok = ((0 <= amplitudes) & (amplitudes < depth)).all()
+    depth_ok = depth >= 0
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
     sigma_ok = ((1.5/60/24 < sigmas) &
                 (sigmas < upper_t_bound - lower_t_bound)).all()
-    depth_ok = ((0.002 <= depth) & (depth < 0.03)).all()
+    if not skip_priors:
+        amplitude_ok = ((0 <= amplitudes) & (amplitudes < depth)).all()
+    else:
+        amplitude_ok = (amplitudes >= 0).all()
 
     if amplitude_ok and t0_ok and sigma_ok and depth_ok:
-        return 0.0 + depth_prior(depth, transit_params)
+        return 0.0 + depth_prior(depth, transit_params, y, skip_priors)
     return -np.inf
 
 
-def lnlike(theta, x, y, yerr, transit_params):
+def lnlike(theta, x, y, yerr, transit_params, skip_priors=False):
     """
     Log-likelihood of data given model.
 
@@ -352,11 +360,12 @@ def lnlike(theta, x, y, yerr, transit_params):
     lnp : float
         Log-likelihood of data given model, i.e. ln( P(x | theta) )
     """
-    model = spotted_transit_model(theta, x, transit_params)
+    model = spotted_transit_model(theta, x, transit_params, skip_priors)
     return -0.5*np.sum((y-model)**2/yerr**2)
 
 
-def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params):
+def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params,
+           skip_priors):
     """
     Log probability.
 
@@ -380,13 +389,14 @@ def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params):
     -------
 
     """
-    lp = lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params)
+    lp = lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
+                 skip_priors)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + lnlike(theta, x, y, yerr, transit_params)
+    return lp + lnlike(theta, x, y, yerr, transit_params, skip_priors)
 
 
-def spotted_transit_model(theta, times, transit_params):
+def spotted_transit_model(theta, times, transit_params, skip_priors=False):
     """
     Compute sum of spot model and transit model
 
@@ -409,6 +419,7 @@ def spotted_transit_model(theta, times, transit_params):
 
     # Copy initial transit parameters
     transit_params_tmp = deepcopy(transit_params)
+
     # Set depth according to input parameters, compute transit model
     transit_params_tmp.rp = depth**0.5
     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params_tmp, duration_fraction=1.0)
@@ -420,8 +431,9 @@ def spotted_transit_model(theta, times, transit_params):
     in_transit_times = (times < upper_t_bound) & (times > lower_t_bound)
     transit_plus_spot_model[in_transit_times] += spot_model[in_transit_times]
 
-    # Force all model fluxes <=1
-    transit_plus_spot_model[transit_plus_spot_model > 1] = 1.0
+    if not skip_priors:
+        # Force all model fluxes <=1
+        transit_plus_spot_model[transit_plus_spot_model > 1] = 1.0
     return transit_plus_spot_model
 
 
@@ -459,7 +471,7 @@ def spotted_transit_model_individuals(theta, times, transit_params):
 
 def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
                      n_walkers, output_path, burnin=0.7,
-                     n_extra_spots=1):
+                     n_extra_spots=1, skip_priors=False):
     """
     Fit for transit depth and spot parameters given initial guess informed by
     results from `peak_finder`
@@ -485,6 +497,8 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     n_extra_spots : int
         Add `n_extra_spots` extra spots to the fit to soak up spots not
         predicted by `peak_finder`
+    skip_priors : bool
+        Should a prior be applied to the depth parameter?
 
     Returns
     -------
@@ -512,7 +526,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
         realization = fit_params + 1e-5*np.random.randn(ndim)
 
         if not np.isinf(lnprior(realization, fluxes, lower_t_bound,
-                                upper_t_bound, transit_params)):
+                                upper_t_bound, transit_params, skip_priors)):
             pos.append(realization)
 
     print('Begin MCMC...')
@@ -524,7 +538,8 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(times, fluxes, errors, lower_t_bound,
-                                          upper_t_bound, transit_params),
+                                          upper_t_bound, transit_params,
+                                          skip_priors),
                                     pool=pool)
     sampler.run_mcmc(pos, n_steps)
     print('Finished MCMC...')

@@ -86,7 +86,7 @@ def planet_position_cartesian(times, transit_params):
     f = true_anomaly(times, transit_params)
 
     r = r_orbit(f, transit_params)
-    w = np.radians(transit_params.w) # This pi offset was required by Rodrigo also
+    w = np.radians(transit_params.w)
     i = np.radians(transit_params.inc)
 
     X = -r*np.cos(w + f)
@@ -286,6 +286,9 @@ def cartesian_to_spherical(x, y, z):
     r = np.sqrt(x**2 + y**2 + z**2)
     theta = np.arctan2(y, x)
     phi = np.arccos(z/r)
+
+    #correct_these_thetas = theta < 0
+    #theta[correct_these_thetas] += 2*np.pi
     return r, theta, phi
 
 
@@ -410,7 +413,7 @@ def observer_view_to_stellar_view(x, y, z, transit_params, times,
     x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
                              alpha=-i_star),
                         alpha=(-2*np.pi/per_rot *
-                               ((t_mean - stellar_t0) % per_rot)))
+                               (np.abs(t_mean - stellar_t0) % per_rot)))
     return x_p, y_p, z_p
 
 
@@ -427,15 +430,39 @@ def observer_view_to_stsp_view(x, y, z, transit_params, times):
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
     print('z rot: {0}'.format(- 2*np.pi/per_rot *((t_mean - transit_params.t0) % per_rot)))
+    print(t_mean - transit_params.t0)
     x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
                              alpha=-i_star),
 #first                            alpha=(-2*np.pi/per_rot * # -np.pi
 #second                        alpha=(-np.pi - 2*np.pi/per_rot *
 #third                             alpha=(np.pi - 2*np.pi/per_rot *
-                             alpha=(-2*np.pi/per_rot * # -np.pi
-                               ((t_mean - transit_params.t0) % per_rot)))
+                             alpha=(-np.pi/2))# + 2*np.pi/per_rot * # -np.pi
+                                  # (np.abs(t_mean - transit_params.t0) % per_rot)))
     return x_p, y_p, z_p
 
+def observer_view_to_stsp_view_diagnostic(x, y, z, transit_params, times):
+    """
+    First rotate to remove lambda (rotation about z-axis). Then rotate to
+    remove i_s (rotation about x-axis). Then rotate one last time to remove
+    stellar rotation with time (rotation about z-axis again) by using STSP's
+    convention that the longitude=0 is centered on the star at mid-transit
+    """
+
+    i_star = np.radians(transit_params.inc_stellar)
+    lam_star = np.radians(transit_params.lam)
+    per_rot = transit_params.per_rot
+    t_mean = np.mean(times)
+    print('z rot: {0}'.format(- 2*np.pi/per_rot *((t_mean - transit_params.t0) % per_rot)))
+    print(t_mean - transit_params.t0)
+    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
+                             alpha=-i_star),
+#first                            alpha=(-2*np.pi/per_rot * # -np.pi
+#second                        alpha=(-np.pi - 2*np.pi/per_rot *
+#third                             alpha=(np.pi - 2*np.pi/per_rot *
+                             alpha=(-np.pi/2))# + 2*np.pi/per_rot * # -np.pi
+                                #    (np.abs(t_mean - transit_params.t0) % per_rot)))
+    return x_p, y_p, z_p, (np.pi/2 + 2*np.pi/per_rot * # -np.pi
+                           (np.abs(t_mean - transit_params.t0) % per_rot))
 
 def get_lat_lon_grid(n_points, transit_params, transit_view=True):
     """

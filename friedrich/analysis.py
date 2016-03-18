@@ -11,7 +11,8 @@ from .storage import read_results_archive
 from .lightcurve import TransitLightCurve
 from .orientation import (planet_position_cartesian, observer_view_to_stellar_view,
                           cartesian_to_spherical, spherical_to_latlon,
-                          project_planet_to_stellar_surface)
+                          project_planet_to_stellar_surface,
+                          observer_view_to_stsp_view_diagnostic)
 from .orientation import (true_anomaly, plot_lat_lon_gridlines, observer_view_to_stellar_view,
                           unit_circle, cartesian_to_spherical, spherical_to_cartesian,
                           get_lat_lon_grid, times_to_occulted_lat_lon, observer_view_to_stsp_view)
@@ -78,7 +79,7 @@ class MCMCResults(object):
 
         corner(self.chains[::skip_every, :], labels=labels)
 
-    def plot_max_lnp_lc(self):
+    def plot_max_lnp_lc(self, skip_priors=False):
         """
         Plot the maximum likelihood transit+spots model over the data.
 
@@ -89,7 +90,7 @@ class MCMCResults(object):
 
         """
         model = spotted_transit_model(self.best_params, self.lc.times.jd,
-                                      self.transit_params)
+                                      self.transit_params, skip_priors)
         individual_models = spotted_transit_model_individuals(self.best_params,
                                                               self.lc.times.jd,
                                                               self.transit_params)
@@ -344,17 +345,18 @@ class MCMCResults(object):
         #self.transit_params.inc = 87.0
 
         t0 = self.lc.times.jd.mean()
-        spot_times = self.chains[::500, 2::3].T
-        fig, ax = plt.subplots(2, 1, figsize=(8, 10))
+        #spot_times = self.chains[::5000, 2::3].T
+        spot_times = self.best_params[2::3].T
+        fig, ax = plt.subplots(2, 2, figsize=(8, 10))
 
-        ax[0].plot(*unit_circle(thetas))
+        ax[0, 0].plot(*unit_circle(thetas))
 
         # Plot gridlines
         [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z] = get_lat_lon_grid(31, self.transit_params)
 
-        plot_lat_lon_gridlines(ax[0], [lat_x, lat_y, lat_z],
+        plot_lat_lon_gridlines(ax[0, 0], [lat_x, lat_y, lat_z],
                                plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
-        plot_lat_lon_gridlines(ax[0], [lon_x, lon_y, lon_z],
+        plot_lat_lon_gridlines(ax[0, 0], [lon_x, lon_y, lon_z],
                                plot_x_axis=0, plot_y_axis=1, plot_color_axis=2)
 
         for t in spot_times:
@@ -362,12 +364,12 @@ class MCMCResults(object):
             times = np.linspace(t0 - 0.07, t0 + 0.07, 1000)
             #times = np.linspace(self.transit_params.t0 - 0.07, self.transit_params.t0 + self.transit_params.per, 100)
 
-            plot_pos_times = t #np.linspace(self.transit_params.t0 - 0.07,
+            plot_pos_times = np.array([t]) #np.linspace(self.transit_params.t0 - 0.07,
                              #            self.transit_params.t0 + 0.07, 40)
 
             model_lc = generate_lc(times, self.transit_params)
-            ax[1].plot(times, model_lc)
-            ax[1].plot(plot_pos_times, generate_lc(plot_pos_times, self.transit_params),
+            ax[1, 0].plot(times, model_lc)
+            ax[1, 0].plot(plot_pos_times, generate_lc(plot_pos_times, self.transit_params),
                           'ro')
 
             X, Y, Z = planet_position_cartesian(plot_pos_times, self.transit_params)
@@ -375,19 +377,34 @@ class MCMCResults(object):
             spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params, t)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
 
+
+            spot_x_stsp, spot_y_stsp, spot_z_stsp = observer_view_to_stsp_view(spot_x,
+                                                                      spot_y,
+                                                                      spot_z,
+                                                                      self.transit_params,
+                                                                      [t])
+            spot_r_stsp, spot_theta_stsp, spot_phi_stsp = cartesian_to_spherical(spot_x_stsp,
+                                                                  spot_y_stsp,
+                                                                  spot_z_stsp)
+
             cmap = plt.cm.winter
             for i, x, y, z in zip(range(len(X)), X, Y, Z):
-                circle = plt.Circle((x, y), radius=self.transit_params.rp, alpha=1,
+                circle = plt.Circle((x, y), radius=self.transit_params.rp, alpha=0.2,
                                     color=cmap(float(i)/len(X)))#'k')
-                c = ax[0].add_patch(circle)
+                c = ax[0, 0].add_patch(circle)
                 c.set_zorder(20)
 
-            ax[0].scatter(spot_x, spot_y, color='g')
+            ax[0, 0].scatter(spot_x, spot_y, color='g')
+            ax[0, 1].plot(90-np.degrees(spot_phi_stsp), np.degrees(spot_theta_stsp), 'o')
 
-        ax[0].set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view",
+        ax[0, 0].set(xlabel='$x / R_s$', ylabel='$y / R_s$', title="Observer view",
                      xlim=[-1.5, 1.5], ylim=[-1.5, 1.5])
 
-        ax[0].set_aspect('equal')
+        ax[0, 0].set_aspect('equal')
+
+
+#        ax[0, 1].set(xlabel='phi', ylabel='theta')
+        ax[0, 1].set(xlabel='lat', ylabel='lon')
 
     def plot_star_projected(self):
         # projections: ['Hammer', 'Aitoff', 'Mollweide', 'Lambert']
@@ -486,19 +503,58 @@ class MCMCResults(object):
 
     def max_lnp_theta_phi_stsp(self):
         spot_times = self.best_params[2::3]
-        X, Y, Z = planet_position_cartesian(spot_times, self.transit_params)
-        spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-        spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x, spot_y, spot_z, self.transit_params,
-                                                                     spot_times)
-        spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+        spot_phis = []
+        spot_thetas = []
+        for t in spot_times:
+            X, Y, Z = planet_position_cartesian([t], self.transit_params)
+            spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x,
+                                                                      spot_y,
+                                                                      spot_z,
+                                                                      self.transit_params,
+                                                                      [t])
+            spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+            spot_phis.append(spot_phi[0])
+            spot_thetas.append(spot_theta[0])
 
-#        for t, p in zip(spot_theta, spot_phi):
-#            print("theta_stsp={0}, phi_stsp={1}\n".format(p, t))
-        stsp_thetas = spot_phi
-        stsp_phis = spot_theta
-        # stsp_phis = spot_phi
-        # stsp_thetas = spot_theta
+        stsp_thetas = np.array(spot_phis)
+        stsp_phis = np.array(spot_thetas)
+        correct_these_phis = stsp_phis < 0
+        stsp_phis[correct_these_phis] += 2*np.pi
+
         return stsp_thetas, stsp_phis
+
+    def max_lnp_theta_phi_stsp_diagnostic(self):
+        spot_times = self.best_params[2::3]
+        spot_phis = []
+        spot_thetas = []
+        rot_angles = []
+        for t in spot_times:
+            X, Y, Z = planet_position_cartesian([t], self.transit_params)
+            spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+            # spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x,
+            #                                                           spot_y,
+            #                                                           spot_z,
+            #                                                           self.transit_params,
+            #                                                           [t])
+
+            spot_x_s, spot_y_s, spot_z_s, rotangle = observer_view_to_stsp_view_diagnostic(spot_x,
+                                                                      spot_y,
+                                                                      spot_z,
+                                                                      self.transit_params,
+                                                                      [t])
+
+            rot_angles.append(rotangle)
+            spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
+            spot_phis.append(spot_phi[0])
+            spot_thetas.append(spot_theta[0])
+
+        stsp_thetas = np.array(spot_phis)
+        stsp_phis = np.array(spot_thetas)
+        correct_these_phis = stsp_phis < 0
+        stsp_phis[correct_these_phis] += 2*np.pi
+        
+        return stsp_thetas, stsp_phis, rot_angles
 
 
 class Measurement(object):

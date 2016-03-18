@@ -90,8 +90,27 @@ def hat11_params_morris():
     params.per_rot = 29.19412     # Morris periodogram days
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
-    # params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
     return params
+
+
+def hat11_params_morris_notransit():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    params = hat11_params_morris()
+    params.t0 += 0.25*params.per
+    params.rp = 1e-10
+    return params
+
 
 def k17_params_morris():
     """
