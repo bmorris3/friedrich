@@ -74,7 +74,7 @@ class MCMCResults(object):
             is 100.
 
         """
-        labels = ['depth']
+        labels = []
         for i in range(self.chains.shape[0]):
             labels.extend(['$a_{0}$'.format(i), '$t_{{0,{0}}}$'.format(i),
                            '$\sigma_{0}$'.format(i)])
@@ -121,7 +121,7 @@ class MCMCResults(object):
     def get_spots_delta_chi2(self, plots=True):
 
         # Sort spot properties by amplitude (as proxy for robustness)
-        depth, spot_params = self.best_params[0], self.best_params[1:]
+        spot_params = self.best_params
         split_spot_params = np.split(spot_params, len(spot_params)/3)
         spots = [Spot(amplitude=single_spot_params[0], t0=single_spot_params[1],
                       sigma=single_spot_params[2])
@@ -129,8 +129,8 @@ class MCMCResults(object):
 
         spots = sorted(spots, key=lambda spot: -spot.amplitude)
 
-        amp_sorted_best_params = [self.best_params[0]]
-        cumulative_spot_params = [[self.best_params[0]] for i in range(len(spots))]
+        amp_sorted_best_params = []
+        cumulative_spot_params = [[] for i in range(len(spots))]
         for i, spot in enumerate(spots):
             amp_sorted_best_params.extend([spot.amplitude, spot.t0, spot.sigma])
             for j in range(i, len(spots)):
@@ -144,9 +144,7 @@ class MCMCResults(object):
                                                               self.lc.times.jd,
                                                               self.transit_params)
 
-        transit_params_tmp = deepcopy(self.transit_params)
-        transit_params_tmp.rp = self.best_params[0]**0.5
-        no_spots_model = generate_lc(self.lc.times.jd, transit_params_tmp)
+        no_spots_model = generate_lc(self.lc.times.jd, self.transit_params)
 
         spot_colors = ['#0079a3', '#41ad49', '#dcc455', '#f4931f', '#58595b']
 
@@ -157,14 +155,14 @@ class MCMCResults(object):
                           color='k', lw=2, alpha=0.6)
             ax[0, 1].plot(self.lc.times.jd, self.lc.fluxes, 'k.')
             ax[1, 1].plot(self.lc.times.jd,
-                          (self.lc.fluxes - cumulative_models[-1])/self.best_params[0],
+                          (self.lc.fluxes - cumulative_models[-1])/self.transit_params.rp**2,
                           'k.')
 
             for indiv_model, c in zip(individual_models, spot_colors):
                 ax[0, 1].fill_between(self.lc.times.jd, indiv_model, no_spots_model,
                                       color=c, alpha=0.4)
                 ax[1, 1].fill_between(self.lc.times.jd,
-                                      (indiv_model - no_spots_model)/self.best_params[0],
+                                      (indiv_model - no_spots_model)/self.transit_params.rp**2,
                                       0, color=c, alpha=0.4)
 
         delta_chi2s = np.zeros(len(cumulative_models))
@@ -226,16 +224,10 @@ class MCMCResults(object):
                                        spot)
             spots.append(Spot(ampltiude, t0, sigma))
 
-        # depth, spot_params = self.best_params[0], self.best_params[1:]
-        # split_spot_params = np.split(spot_params, len(spot_params)/3)
-        # spots = [Spot(amplitude=single_spot_params[0], t0=single_spot_params[1],
-        #               sigma=single_spot_params[2])
-        #          for single_spot_params in split_spot_params]
-
         spots = sorted(spots, key=lambda spot: -spot.amplitude.value)
 
-        amp_sorted_best_params = [self.best_params[0]]
-        cumulative_spot_params = [[self.best_params[0]] for i in range(len(spots))]
+        amp_sorted_best_params = []
+        cumulative_spot_params = [[] for i in range(len(spots))]
         for i, spot in enumerate(spots):
             amp_sorted_best_params.extend([spot.amplitude.value, spot.t0.value,
                                            spot.sigma.value])
@@ -252,9 +244,7 @@ class MCMCResults(object):
                                                               self.lc.times.jd,
                                                               self.transit_params)
 
-        transit_params_tmp = deepcopy(self.transit_params)
-        transit_params_tmp.rp = self.best_params[0]**0.5
-        no_spots_model = generate_lc(self.lc.times.jd, transit_params_tmp)
+        no_spots_model = generate_lc(self.lc.times.jd, self.transit_params)
 
         spot_colors = ['#0079a3', '#41ad49', '#dcc455', '#f4931f', '#58595b']
 
@@ -304,7 +294,6 @@ class MCMCResults(object):
             spots.append(Spot(ampltiude, t0, sigma))
         return Transit(spots)
 
-
     def plot_lat_lon(self):
         # times = self.chains[:, 2::3]
         # for i in range(times.shape[1]):
@@ -339,8 +328,6 @@ class MCMCResults(object):
         # plt.plot(bincenters, n, ls='steps')
         # plt.title('lon')
 
-
-
     def plot_star(self):
 
         thetas = np.linspace(0, 2*np.pi, 10000)
@@ -348,7 +335,7 @@ class MCMCResults(object):
 
         t0 = self.lc.times.jd.mean()
         #spot_times = self.chains[::5000, 2::3].T
-        spot_times = self.best_params[2::3].T
+        spot_times = self.best_params[1::3].T
         fig, ax = plt.subplots(2, 2, figsize=(8, 10))
 
         ax[0, 0].plot(*unit_circle(thetas))
@@ -450,8 +437,8 @@ class MCMCResults(object):
 
         # plot tissot ellipses for samples from the gaussian spots
         skip_every = 20000  # plots 50 ellipses per spot
-        times = self.chains[::skip_every, 2::3].T
-        amplitudes = self.chains[::skip_every, 1::3].T
+        times = self.chains[::skip_every, 1::3].T
+        amplitudes = self.chains[::skip_every, 0::3].T
         n_spots = times.shape[0]
         colors = ['b', 'g', 'r']
         while n_spots > len(colors):
@@ -493,7 +480,7 @@ class MCMCResults(object):
         ax2.set_ylabel('Flux')
 
     def max_lnp_theta_phi(self):
-        spot_times = self.best_params[2::3]
+        spot_times = self.best_params[1::3]
         X, Y, Z = planet_position_cartesian(spot_times, self.transit_params)
         spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
         spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y, spot_z, self.transit_params,
@@ -504,7 +491,7 @@ class MCMCResults(object):
             print("theta={0}, phi={1}\n".format(t, p))
 
     def max_lnp_theta_phi_stsp(self):
-        spot_times = self.best_params[2::3]
+        spot_times = self.best_params[1::3]
         spot_phis = []
         spot_thetas = []
         for t in spot_times:
@@ -527,7 +514,7 @@ class MCMCResults(object):
         return stsp_thetas, stsp_phis
 
     def max_lnp_theta_phi_stsp_diagnostic(self):
-        spot_times = self.best_params[2::3]
+        spot_times = self.best_params[1::3]
         spot_phis = []
         spot_thetas = []
         rot_angles = []
