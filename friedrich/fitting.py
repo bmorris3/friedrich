@@ -314,9 +314,10 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
     sigmas = spot_params[2::3]
     depth = transit_params.rp**2
 
+    min_sigma = 1.5/60/24
+    max_sigma = 6.0e-3  # upper_t_bound - lower_t_bound
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
-    sigma_ok = ((1.5/60/24 < sigmas) &
-                (sigmas < upper_t_bound - lower_t_bound)).all()
+    sigma_ok = ((min_sigma < sigmas) & (sigmas < max_sigma)).all()
     if not skip_priors:
         amplitude_ok = ((0 <= amplitudes) & (amplitudes < depth)).all()
     else:
