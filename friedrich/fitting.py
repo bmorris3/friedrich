@@ -496,7 +496,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     init_depth = transit_params.rp**2
 
     extra_spot_params = [0.1*np.min(amps), np.mean(times),
-                         0.2*(upper_t_bound-lower_t_bound)]
+                         0.05*(upper_t_bound-lower_t_bound)]
     fit_params = np.concatenate([spot_parameters,
                                  n_extra_spots*extra_spot_params])
 
