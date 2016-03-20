@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-#sys.path.insert(0, '../')
-sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+sys.path.insert(0, '../')
+#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, hat11_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -57,11 +57,16 @@ for i, quarter_number, lc in zip(range(len(available_quarters)),
 transit_number = int(sys.argv[1])
 
 lc = transits[transit_number]
-lc.delete_outliers()
 lc.subtract_polynomial_baseline(order=2, params=hat11_params)
 lc.fluxes += quarterly_maxes[lc.quarters[0]]
 lc.fluxes /= quarterly_maxes[lc.quarters[0]]
 lc.errors /= quarterly_maxes[lc.quarters[0]]
+
+lc_output_path = os.path.join(output_dir,
+                              'lc{0:03d}.txt'.format(transit_number))
+np.savetxt(lc_output_path, np.vstack([lc.times.jd, lc.fluxes, lc.errors]).T)
+
+lc.delete_outliers()
 
 # Subtract out a transit model
 transit_model = generate_lc_depth(lc.times_jd, depth, hat11_params)
@@ -79,7 +84,8 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, hat11_params, best_fit_spot_params,
-                               n_steps=15000, n_walkers=150,
+                               #n_steps=15000, n_walkers=150,
+                               n_steps=1000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
-                               n_extra_spots=1)
+                               n_extra_spots=0)
 
