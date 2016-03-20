@@ -9,15 +9,17 @@ from copy import deepcopy
 from .fitting import spotted_transit_model, spotted_transit_model_individuals, generate_lc
 from .storage import read_results_archive
 from .lightcurve import TransitLightCurve
-from .orientation import (planet_position_cartesian, observer_view_to_stellar_view,
-                          cartesian_to_spherical, spherical_to_latlon,
+from .orientation import (planet_position_cartesian, spherical_to_latlon,
                           project_planet_to_stellar_surface,
                           observer_view_to_stsp_view_diagnostic)
-from .orientation import (true_anomaly, plot_lat_lon_gridlines, observer_view_to_stellar_view,
-                          unit_circle, cartesian_to_spherical, spherical_to_cartesian,
-                          get_lat_lon_grid, times_to_occulted_lat_lon, observer_view_to_stsp_view)
+from .orientation import (plot_lat_lon_gridlines,
+                          observer_view_to_stellar_view,
+                          unit_circle, cartesian_to_spherical,
+                          get_lat_lon_grid, times_to_occulted_lat_lon,
+                          observer_view_to_stsp_view)
 
 from astroML.plotting import plot_tissot_ellipse
+from scipy.optimize import fmin_powell
 
 import matplotlib.pyplot as plt
 try:
@@ -555,6 +557,52 @@ class MCMCResults(object):
         stsp_phis[correct_these_phis] += 2*np.pi
         
         return stsp_thetas, stsp_phis, rot_angles
+
+    def to_stsp_in(self):
+        thetas, phis = self.max_lnp_theta_phi_stsp()
+        radii = np.zeros_like(thetas) + 0.8*self.transit_params.rp
+
+        spot_params = []
+        for r, t, p in zip(radii, thetas, phis):
+
+            spot_params.extend([r, t, p])
+
+        def spot_model(radii, mcmc=self):
+
+            if len(thetas) > 1:
+                spot_params = []
+                for r, t, p in zip(radii, thetas, phis):
+                    spot_params.extend([r, t, p])
+            else:
+                spot_params = [radii[0], thetas[0], phis[0]]
+
+
+            s = STSP(mcmc.lc, mcmc.transit_params, spot_params)
+            t_model, f_model = s.stsp_lc()
+            return t_model, f_model
+
+        def spot_chi2(radii):
+            t_model, f_model = spot_model(radii)
+
+            first_ind = 0
+            eps = 1e-5
+            if np.abs(t_model.data[0] - self.lc.times.jd[0]) > eps:
+                for ind, time in enumerate(self.lc.times.jd):
+                    if np.abs(t_model.data[0] - time) < eps:
+                        first_ind = ind
+            chi2 = np.sum((self.lc.fluxes[first_ind:] - f_model)**2 /
+                          self.lc.errors[first_ind:]**2)
+            return chi2
+
+
+        init_radii = np.zeros(len(thetas)) + 0.8*m.transit_params.rp
+
+        best_radii = fmin_powell(spot_chi2, init_radii)
+        print(best_radii)
+        if len(best_radii.shape) == 0:
+            best_radii = [best_radii.tolist()]
+
+        best_t, best_f = spot_model(best_radii)
 
 
 class Measurement(object):

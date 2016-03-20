@@ -429,8 +429,7 @@ def observer_view_to_stsp_view(x, y, z, transit_params, times):
     lam_star = np.radians(transit_params.lam)
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
-    print('z rot: {0}'.format(- 2*np.pi/per_rot *((t_mean - transit_params.t0) % per_rot)))
-    print(t_mean - transit_params.t0)
+
     x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
                              alpha=-i_star),
 #first                            alpha=(-2*np.pi/per_rot * # -np.pi
@@ -452,8 +451,7 @@ def observer_view_to_stsp_view_diagnostic(x, y, z, transit_params, times):
     lam_star = np.radians(transit_params.lam)
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
-    print('z rot: {0}'.format(- 2*np.pi/per_rot *((t_mean - transit_params.t0) % per_rot)))
-    print(t_mean - transit_params.t0)
+
     x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
                              alpha=-i_star),
 #first                            alpha=(-2*np.pi/per_rot * # -np.pi

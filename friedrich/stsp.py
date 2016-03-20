@@ -139,7 +139,7 @@ class STSP(object):
         np.savetxt(self.model_path,
                    np.vstack([times, fluxes,
                               fluxes]).T,
-                   fmt=str('%1.8f'), delimiter='\t')
+                   fmt=str('%1.10f'), delimiter='\t', header='stspinputs')
 
         # Calculate parameters for STSP:
         eccentricity, omega = self.transit_params.ecc, self.transit_params.w
