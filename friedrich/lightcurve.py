@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import shutil
 import batman
-
+import json
 
 def kepler17_params_db():
     """
@@ -53,6 +53,46 @@ def kepler17_params_db():
     return params
 
 
+# def hat11_params_morris():
+#     """
+#     Transit light curve parameters from Brett for HAT-P-11. Some parameters
+#     constrained by RVs from Winn et al. 2010 [1]_
+#
+#     Returns
+#     -------
+#     params : `~batman.TransitParams`
+#         Transit parameters for HAT-P-11
+#
+#     .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+#     """
+#     ecosw = 0.261  # Winn et al. 2010
+#     esinw = 0.085  # Winn et al. 2010
+#     eccentricity = np.sqrt(ecosw**2 + esinw**2)
+#     omega = np.degrees(np.arctan2(esinw, ecosw))
+#
+#     params = batman.TransitParams()
+#     params.t0 = 2454605.8914656607   # time of inferior conjunction
+#     params.per = 4.887802573        # orbital period
+#     params.rp = 0.0583329       # planet radius (in units of stellar radii)
+#     params.b = 0.14505919          # impact parameter
+#     params.inc = 89.3395911     # orbital inclination (in degrees)
+#
+#     params.ecc = eccentricity      # eccentricity
+#     params.w = omega              # longitude of periastron (in degrees)
+#     params.a = 14.7677773         # semi-major axis (in units of stellar radii)
+#     params.u = [0.640416, 0.048367]    # limb darkening coefficients
+#     params.limb_dark = "quadratic" # limb darkening model
+#
+#     # Required by some friedrich methods below but not by batman:
+#     params.duration = 0.0979731                   # transit duration
+#     params.lam = 106.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
+#     params.inc_stellar = 80     # Sanchis-Ojeda & Winn 2011 (soln 1)
+#     params.per_rot = 29.19412     # Morris periodogram days
+#
+#     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+#     # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+#     return params
+
 def hat11_params_morris():
     """
     Transit light curve parameters from Brett for HAT-P-11. Some parameters
@@ -65,29 +105,34 @@ def hat11_params_morris():
 
     .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
     """
-    ecosw = 0.261  # Winn et al. 2010
-    esinw = 0.085  # Winn et al. 2010
-    eccentricity = np.sqrt(ecosw**2 + esinw**2)
-    omega = np.degrees(np.arctan2(esinw, ecosw))
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    j = json.load(open('hat11_parameters.json'))
+
+    eccentricity = j['ecc']
+    omega = j['w']
 
     params = batman.TransitParams()
-    params.t0 = 2454605.8914656607   # time of inferior conjunction
-    params.per = 4.887802573        # orbital period
-    params.rp = 0.0583329       # planet radius (in units of stellar radii)
-    params.b = 0.14505919          # impact parameter
-    params.inc = 89.3395911     # orbital inclination (in degrees)
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
 
     params.ecc = eccentricity      # eccentricity
     params.w = omega              # longitude of periastron (in degrees)
-    params.a = 14.7677773         # semi-major axis (in units of stellar radii)
-    params.u = [0.640416, 0.048367]    # limb darkening coefficients
-    params.limb_dark = "quadratic" # limb darkening model
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
 
     # Required by some friedrich methods below but not by batman:
-    params.duration = 0.0979731                   # transit duration
-    params.lam = 106.0          # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.inc_stellar = 80     # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.per_rot = 29.19412     # Morris periodogram days
+    params.duration = j['duration']                   # transit duration
+    params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = j['lam']     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
