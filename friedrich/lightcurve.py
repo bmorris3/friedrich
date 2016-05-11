@@ -6,15 +6,30 @@ curves.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from astropy.io import fits
-from astropy.time import Time
-import astropy.units as u
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-import shutil
-import batman
-import json
+try:
+    from astropy.io import fits
+    from astropy.time import Time
+    import astropy.units as u
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import shutil
+    import batman
+    import json
+except ImportError:
+    print("WARNING: skipping some imports. This should only come up on XSEDE, "
+          "otherwise you are missing some required dependencies.")
+
+    class MockTransitParams(object):
+        def __init__(self):
+            pass
+
+    class batman(object):
+        @staticmethod
+        def TransitParams():
+
+            return MockTransitParams()
+
 
 def kepler17_params_db():
     """
@@ -131,6 +146,8 @@ def hat11_params_morris():
     params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.inc_stellar = j['inc_stellar']     # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
