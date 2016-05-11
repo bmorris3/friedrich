@@ -6,14 +6,16 @@ import sys
 from glob import glob
 import os, subprocess
 
-import matplotlib.pyplot as plt
-import batman
+from .analysis import MCMCResults
+
 import numpy as np
 from astropy.io import ascii
+from scipy.optimize import fmin
+import matplotlib.pyplot as plt
 
 stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
 
-infile_template = """#PLANET PROPERTIES
+infile_template_l = """#PLANET PROPERTIES
 1							; Number of planets -- (if there are more than 1 planet, then the set of 8 planet properties are repeated)
 {t0:2.10f}					; T0, epoch         (middle of first transit) in days.
 {period:2.10f}				; Planet Period      (days)
@@ -151,14 +153,11 @@ class STSP(object):
         nonlinear_ld_string = ' '.join(map("{0:.5f}".format, nonlinear_ld))
 
         # get spot parameters sorted out
-        spot_params_str = ""
-        for param_set in np.split(self.spot_params, len(self.spot_params)/3):
-            spot_params_str += spot_params_template.format(spot_radius=param_set[0],
-                                                           spot_theta=param_set[1],
-                                                           spot_phi=param_set[2])
+        spot_params_str = spot_params_to_string(self.spot_params)
 
         # Stick those values into the template file
-        in_file_text = infile_template.format(period=self.transit_params.per,
+
+        in_file_text = infile_template_l.format(period=self.transit_params.per,
                                               ecosw=ecosw,
                                               esinw=esinw,
                                               lam=self.transit_params.lam,
@@ -199,3 +198,90 @@ class STSP(object):
         stsp_times, stsp_fluxes = tbl['col1'], tbl['col4']
         return stsp_times - n_transits*self.transit_params.per, stsp_fluxes
 
+
+def spot_params_to_string(spot_params):
+    spot_params_str = ""
+    for param_set in np.split(spot_params, len(spot_params)/3):
+        spot_params_str += spot_params_template.format(spot_radius=param_set[0],
+                                                       spot_theta=param_set[1],
+                                                       spot_phi=param_set[2])
+    return spot_params_str
+
+
+
+def friedrich_results_to_stsp_inputs(results_dir, transit_params):
+    """
+    Take outputs from friedrich, turn them into STSP inputs.
+    """
+
+    chains_paths = sorted(glob(os.path.join(results_dir, 'chains???.hdf5')))
+
+    for path in chains_paths:
+        m = MCMCResults(path, transit_params)
+        thetas, phis = m.max_lnp_theta_phi_stsp()
+
+        def spot_model(radii, mcmc, thetas=thetas, phis=phis):
+            if len(thetas) > 1:
+                spot_params = []
+                for r, t, p in zip(radii, thetas, phis):
+                    spot_params.extend([r, t, p])
+            else:
+                spot_params = [radii[0], thetas[0], phis[0]]
+
+
+            s = STSP(mcmc.lc, mcmc.transit_params, spot_params)
+            t_model, f_model = s.stsp_lc()
+            return t_model, f_model
+
+        def spot_chi2(radii, mcmc=m):
+            t_model, f_model = spot_model(radii, mcmc=mcmc)
+
+            first_ind = 0
+            eps = 1e-5
+            if np.abs(t_model.data[0] - mcmc.lc.times.jd[0]) > eps:
+                for ind, time in enumerate(mcmc.lc.times.jd):
+                    if np.abs(t_model.data[0] - time) < eps:
+                        first_ind = ind
+            chi2 = np.sum((mcmc.lc.fluxes[first_ind:] - f_model)**2 /
+                          mcmc.lc.errors[first_ind:]**2)
+            return chi2
+
+        init_radii = np.zeros(len(thetas)) + 0.8*m.transit_params.rp
+
+        best_radii = fmin(spot_chi2, init_radii[:])
+
+        if len(best_radii.shape) == 0:
+            best_radii = [best_radii.tolist()]
+
+        best_t, best_f = spot_model(best_radii, m)
+
+        if len(thetas) > 1:
+            spot_params_out = []
+            for r, t, p in zip(best_radii, thetas, phis):
+                spot_params_out.extend([r, t, p])
+
+        stsp_params_out = spot_params_to_string(np.array(spot_params_out))
+
+        transit_number = int(m.index.split('chains')[1])
+
+        stsp_out_path = os.path.join(results_dir,
+                                     'stsp_spots{0:03d}.txt'.format(transit_number))
+        with open(stsp_out_path, 'w') as stsp_params_file:
+            stsp_params_file.write(stsp_params_out)
+
+        # fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
+        # minjdint = int(np.min(m.lc.times.jd))
+        # ax[0].plot(m.lc.times.jd - minjdint, m.lc.fluxes, 'k.')
+        # ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
+        # ax[0].set(ylabel='Flux',
+        #           xlim=(np.min(m.lc.times.jd - minjdint),
+        #                 np.max(m.lc.times.jd - minjdint)),
+        #           ylim=(0.995, 1.001),
+        #           title='{0}'.format(m.index))
+        # ax[1].set(xlabel='JD - {0}'.format(minjdint), ylabel='Residuals')
+        #
+        # ax[1].plot(m.lc.times.jd - minjdint, m.lc.fluxes - best_f, 'k.')
+        # ax[1].axhline(0, ls='--', color='r')
+        # fig.tight_layout()
+        #plt.savefig('tmp/{0}.png'.format(m.index), bbox_inches='tight')
+        #plt.close()

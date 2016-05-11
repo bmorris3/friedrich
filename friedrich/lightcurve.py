@@ -110,10 +110,8 @@ def hat11_params_morris():
     # eccentricity = np.sqrt(ecosw**2 + esinw**2)
     # omega = np.degrees(np.arctan2(esinw, ecosw))
 
-    j = json.load(open('hat11_parameters.json'))
-
-    eccentricity = j['ecc']
-    omega = j['w']
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
 
     params = batman.TransitParams()
     params.t0 = j['t0']   # time of inferior conjunction
@@ -122,8 +120,8 @@ def hat11_params_morris():
     params.b = j['b']          # impact parameter
     params.inc = j['inc']     # orbital inclination (in degrees)
 
-    params.ecc = eccentricity      # eccentricity
-    params.w = omega              # longitude of periastron (in degrees)
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
     params.a = j['a']         # semi-major axis (in units of stellar radii)
     params.u = j['u']    # limb darkening coefficients
     params.limb_dark = j['limb_dark'] # limb darkening model
@@ -131,7 +129,7 @@ def hat11_params_morris():
     # Required by some friedrich methods below but not by batman:
     params.duration = j['duration']                   # transit duration
     params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.inc_stellar = j['lam']     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = j['inc_stellar']     # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.per_rot = j['per_rot']     # Morris periodogram days
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
