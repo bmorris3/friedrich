@@ -47,11 +47,11 @@ available_quarters = whole_lc.get_available_quarters()
 quarters = [whole_lc.get_quarter(q) for q in whole_lc.get_available_quarters()]
 
 quarterly_maxes = {}
-set_upper_limit = 4e4
+set_upper_limit = 3e4 
 for i, quarter_number, lc in zip(range(len(available_quarters)),
                                  available_quarters, quarters):
     fluxes = lc.fluxes[lc.fluxes < set_upper_limit]
-    smoothed_fluxes = gaussian_filter(fluxes, sigma=20)
+    smoothed_fluxes = gaussian_filter(fluxes, sigma=700)
     quarterly_maxes[quarter_number] = np.max(smoothed_fluxes)
 
 # Read from command line argument
@@ -82,4 +82,4 @@ if best_fit_spot_params is not None:
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
                                n_steps=15000, n_walkers=100,
                                output_path=output_path, burnin=0.6,
-                               n_extra_spots=1)
+                               n_extra_spots=0)

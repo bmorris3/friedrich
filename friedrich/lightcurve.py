@@ -110,7 +110,7 @@ def hat11_params_morris():
     # eccentricity = np.sqrt(ecosw**2 + esinw**2)
     # omega = np.degrees(np.arctan2(esinw, ecosw))
 
-    j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
 
     eccentricity = j['ecc']
     omega = j['w']

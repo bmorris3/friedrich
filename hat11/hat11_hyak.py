@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-sys.path.insert(0, '../')
-#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+#sys.path.insert(0, '../')
+sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, hat11_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -84,8 +84,7 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, hat11_params, best_fit_spot_params,
-                               #n_steps=15000, n_walkers=150,
-                               n_steps=1000, n_walkers=150,
+                               n_steps=15000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=0)
 
