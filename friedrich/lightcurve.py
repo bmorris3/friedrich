@@ -6,30 +6,15 @@ curves.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-try:
-    from astropy.io import fits
-    from astropy.time import Time
-    import astropy.units as u
-    import os
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import shutil
-    import batman
-    import json
-except ImportError:
-    print("WARNING: skipping some imports. This should only come up on XSEDE, "
-          "otherwise you are missing some required dependencies.")
-
-    class MockTransitParams(object):
-        def __init__(self):
-            pass
-
-    class batman(object):
-        @staticmethod
-        def TransitParams():
-
-            return MockTransitParams()
-
+from astropy.io import fits
+from astropy.time import Time
+import astropy.units as u
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import shutil
+import batman
+import json
 
 def kepler17_params_db():
     """
@@ -151,6 +136,52 @@ def hat11_params_morris():
 
     # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
     # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    return params
+
+
+def hat11_params_morris_rm_soln_2():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
+
+    params = batman.TransitParams()
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
+
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = j['duration']                   # transit duration
+    #params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    #params.inc_stellar = j['inc_stellar']     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
+
+    params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    params.inc_stellar = 168.0    # Sanchis-Ojeda & Winn 2011 (soln 2)
     return params
 
 
