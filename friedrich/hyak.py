@@ -27,11 +27,11 @@ submit_template = """#!/bin/bash
 #PBS -d {run_dir}
 
 ## GROUP to run under
-#PBS -W group_list=hyak-stf
-## PBS -q bf
+## PBS -W group_list=hyak-stf
+#PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=16,mem=20gb,feature=intel,feature=16core
+#PBS -l nodes=1:ppn=8,mem=20gb,feature=intel,feature=8core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
@@ -96,7 +96,7 @@ cd $PBS_O_WORKDIR
 mpiexec.hydra -n $HYAK_NPE python {run_script} {transit_number}
 """
 
-def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
+def launch_hyak_run(n_transits, run_script, run_dir, output_dir, job_name='friedrich',
                     log_dir='/gscratch/stf/bmmorris/friedrich/logs',
                     submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
@@ -115,7 +115,9 @@ def launch_hyak_run(n_transits, run_script, run_dir, job_name='friedrich',
                                                run_script=run_script,
                                                transit_number=transit_number)
 
-        output_file_name = '/gscratch/stf/bmmorris/friedrich/hat11/chains{0:03d}.hdf5'.format(i)
+#        output_file_name = '/gscratch/stf/bmmorris/friedrich/hat11/chains{0:03d}.hdf5'.format(i)
+        output_file_name = os.path.join(output_dir,
+                                        'chains{0:03d}.hdf5'.format(i))
         if not os.path.exists(output_file_name):
 
             submit_script_path = os.path.join(submit_script_dir, submit_script_name)
