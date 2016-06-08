@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-#sys.path.insert(0, '../')
-sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+sys.path.insert(0, '../')
+#sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, hat11_params_morris_minus_15,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -24,7 +24,7 @@ if os.path.exists('/Users/bmmorris/data/hat11/'):
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11_minus_15')
 elif os.path.exists('/local/tmp/hat11'):
     # on mist
     light_curve_paths = glob('/local/tmp/hat11/*slc.fits')
@@ -74,7 +74,7 @@ residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   hat11_params, n_peaks=4, plots=False,
+                                   hat11_params, n_peaks=4, plots=True,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
                                            best_fit_spot_params)
