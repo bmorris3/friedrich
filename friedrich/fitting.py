@@ -61,9 +61,9 @@ def peak_finder_chi2(theta, x, y, yerr):
     model = summed_gaussians(x, theta)
     return np.sum((y-model)**2/yerr**2)
 
-
 def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
-                plots=False, verbose=False, skip_priors=False):
+                plots=False, verbose=False, skip_priors=False, broaden_gaussian_factor=1,
+                max_sigma=6.0e-3):
     """
     Find peaks in the residuals from a fit to a transit light curve, which
     correspond to starspot occultations.
@@ -105,8 +105,8 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
     """
     # http://stackoverflow.com/a/25666951
     # Convolve residuals with a gaussian, find relative maxima
-    n_points_kernel = 100
-    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=3)
+    n_points_kernel = 100*broaden_gaussian_factor#100
+    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=3*broaden_gaussian_factor)
     filtered = signal.fftconvolve(window, residuals)
     filtered = (np.max(residuals) / np.max(filtered)) * filtered
     filtered = np.roll(filtered, int(-n_points_kernel/2))[:len(residuals)]
@@ -144,7 +144,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
 
     peak_times = times[highest_maxes_in_transit]
     peak_amplitudes = residuals[highest_maxes_in_transit]
-    peak_sigmas = np.zeros(len(peak_times)) + 2./60/24  # 3 min
+    peak_sigmas = np.zeros(len(peak_times)) + 2.*broaden_gaussian_factor/60/24  # 3 min
     input_parameters = np.vstack([peak_amplitudes, peak_times,
                                   peak_sigmas]).T.ravel()
 
@@ -164,7 +164,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
 
         trial_params = np.array([amplitude, t0, sigma])
         if not np.isinf(lnprior(trial_params, residuals, lower_t_bound,
-                                upper_t_bound, transit_params, skip_priors)):
+                                upper_t_bound, transit_params, skip_priors, max_sigma)):
             result_in_transit.extend([amplitude, t0, np.abs(sigma)])
     result_in_transit = np.array(result_in_transit)
 
@@ -200,6 +200,145 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
         plt.show()
 
     return result_in_transit
+
+# def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
+#                 plots=False, verbose=False, skip_priors=False):
+#     """
+#     Find peaks in the residuals from a fit to a transit light curve, which
+#     correspond to starspot occultations.
+#
+#     Parameters
+#     ----------
+#     times : `numpy.ndarray`
+#         Times [JD]
+#     residuals : `numpy.ndarray`
+#         Fluxes
+#     errors : `numpy.ndarray`
+#         Uncertainties on residuals
+#     transit_params : `~batman.TransitParams`
+#         Transit light curve parameters
+#     n_peaks : bool (optional)
+#         Number of peaks to search for. If more than `n_peaks` are found, return
+#         only the `n_peaks` largest amplitude peaks.
+#     plots : bool (optional)
+#         Show diagnostic plots
+#     verbose : bool (optional)
+#         Warn if no peaks are found
+#
+#     Returns
+#     -------
+#     result_in_transit : list or `None`
+#         List of all spot parameters in [amp, t0, sig, amp, t0, sig, ...] order
+#         for spots detected.
+#
+#     Notes
+#     -----
+#     Review of minimizers tried for `peak_finder`:
+#
+#     `~scipy.optimize.fmin` gets amplitudes right, but doesn't vary sigmas much.
+#     For this reason, it tends to do a better job of finding nearby, semi-
+#     overlapping spots.
+#
+#     `~scipy.optimize.fmin_powell` varies amplitudes and sigmas lots, but
+#     as a result, sometimes two nearby spots are fit with one wide gaussian.
+#     """
+#     # http://stackoverflow.com/a/25666951
+#     # Convolve residuals with a gaussian, find relative maxima
+#     n_points_kernel = 100
+#     window = signal.general_gaussian(n_points_kernel+1, p=1, sig=3)
+#     filtered = signal.fftconvolve(window, residuals)
+#     filtered = (np.max(residuals) / np.max(filtered)) * filtered
+#     filtered = np.roll(filtered, int(-n_points_kernel/2))[:len(residuals)]
+#
+#     maxes = signal.argrelmax(filtered)[0]
+#
+#     # Only take maxima, not minima
+#     maxes = maxes[filtered[maxes] > 0]
+#
+#     lower_t_bound, upper_t_bound = get_in_transit_bounds(times, transit_params)
+#     maxes_in_transit = maxes[(times[maxes] < upper_t_bound) &
+#                              (times[maxes] > lower_t_bound)]
+#
+#     # Only take the `n_peaks` highest peaks
+#     if len(maxes_in_transit) > n_peaks:
+#         highest_maxes_in_transit = maxes_in_transit[np.argsort(filtered[maxes_in_transit])][-n_peaks:]
+#     else:
+#         highest_maxes_in_transit = maxes_in_transit
+#
+#     # plt.plot(times, filtered)
+#     # plt.plot(times, residuals, '.')
+#     # plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
+#     # [plt.axvline(times[m], color='k') for m in maxes]
+#     # [plt.axvline(times[m], color='m') for m in maxes_in_transit]
+#     # if len(maxes_in_transit) > n_peaks:
+#     #     [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
+#     # plt.axvline(upper_t_bound, color='r')
+#     # plt.axvline(lower_t_bound, color='r')
+#     # plt.show()
+#
+#     if len(maxes_in_transit) == 0:
+#         if verbose:
+#             print('no maxes found')
+#         return None
+#
+#     peak_times = times[highest_maxes_in_transit]
+#     peak_amplitudes = residuals[highest_maxes_in_transit]
+#     peak_sigmas = np.zeros(len(peak_times)) + 2./60/24  # 3 min
+#     input_parameters = np.vstack([peak_amplitudes, peak_times,
+#                                   peak_sigmas]).T.ravel()
+#
+#     result = optimize.fmin_powell(peak_finder_chi2, input_parameters,
+#                                   disp=False, args=(times, residuals, errors),
+#                                   xtol=0.00001, ftol=0.00001)
+#
+#     # if np.all(result == input_parameters):
+#     #     print('oh no!, fmin didnt produce a fit')
+#
+#     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
+#     # and amplitude is positive:
+#     split_result = np.split(result, len(input_parameters)/3)
+#     result_in_transit = []
+#     for amplitude, t0, sigma in split_result:
+#         depth = transit_params.rp**2
+#
+#         trial_params = np.array([amplitude, t0, sigma])
+#         if not np.isinf(lnprior(trial_params, residuals, lower_t_bound,
+#                                 upper_t_bound, transit_params, skip_priors)):
+#             result_in_transit.extend([amplitude, t0, np.abs(sigma)])
+#     result_in_transit = np.array(result_in_transit)
+#
+#     if len(result_in_transit) == 0:
+#         return None
+#
+#     if plots:
+#         fig, ax = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
+#
+#         ax[0].errorbar(times, residuals, fmt='.', color='k')
+#         [ax[0].axvline(t) for t in result_in_transit[1::3]]
+#         ax[0].plot(times, summed_gaussians(times, input_parameters), 'r')
+#         ax[0].axhline(0, color='k', ls='--')
+#         ax[0].set_ylabel('Transit Residuals')
+#
+#         ax[1].errorbar(times, residuals, fmt='.', color='k')
+#         ax[1].plot(times, summed_gaussians(times, result_in_transit), 'r')
+#         ax[1].axhline(0, color='k', ls='--')
+#         ax[1].set_ylabel('Residuals')
+#
+#         ax[2].errorbar(times,
+#                        residuals - summed_gaussians(times, result_in_transit),
+#                        fmt='.', color='k')
+#         #ax[1].errorbar(times, gaussian_model, fmt='.', color='r')
+#         ax[2].axhline(0, color='k', ls='--')
+#         ax[2].set_ylabel('Residuals')
+#
+#         for axis in ax:
+#             axis.axvline(upper_t_bound, color='r')
+#             axis.axvline(lower_t_bound, color='r')
+#
+#         fig.tight_layout()
+#         plt.show()
+#
+#     return result_in_transit
 
 
 def generate_lc(times, transit_params):
@@ -284,8 +423,50 @@ def get_in_transit_bounds(times, params, duration_fraction=0.9):
     return times[near_transit].min(), times[near_transit].max()
 
 
+# def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
+#             skip_priors):
+#     """
+#     Log prior for `emcee` runs.
+#
+#     Parameters
+#     ----------
+#     theta : list
+#         Fitting parameters
+#     y : `numpy.ndarray`
+#         Fluxes
+#     lower_t_bound : float
+#         Earliest in-transit time [JD]
+#     upper_t_bound : float
+#         Latest in-transit time [JD]
+#     skip_priors : bool
+#         Should the priors be skipped?
+#
+#     Returns
+#     -------
+#     lnpr : float
+#         Log-prior for trial parameters `theta`
+#     """
+#     spot_params = theta
+#
+#     amplitudes = spot_params[::3]
+#     t0s = spot_params[1::3]
+#     sigmas = spot_params[2::3]
+#     depth = transit_params.rp**2
+#
+#     min_sigma = 1.5/60/24
+#     max_sigma = 6.0e-3  # upper_t_bound - lower_t_bound
+#     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
+#     sigma_ok = ((min_sigma < sigmas) & (sigmas < max_sigma)).all()
+#     if not skip_priors:
+#         amplitude_ok = ((0 <= amplitudes) & (amplitudes < depth)).all()
+#     else:
+#         amplitude_ok = (amplitudes >= 0).all()
+#
+#     if amplitude_ok and t0_ok and sigma_ok:
+#         return 0.0
+#     return -np.inf
 def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
-            skip_priors):
+            skip_priors, max_sigma=6.0e-3):
     """
     Log prior for `emcee` runs.
 
@@ -315,7 +496,7 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
     depth = transit_params.rp**2
 
     min_sigma = 1.5/60/24
-    max_sigma = 6.0e-3  # upper_t_bound - lower_t_bound
+    #max_sigma = 6.0e-3  # upper_t_bound - lower_t_bound
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
     sigma_ok = ((min_sigma < sigmas) & (sigmas < max_sigma)).all()
     if not skip_priors:
@@ -326,7 +507,6 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
     if amplitude_ok and t0_ok and sigma_ok:
         return 0.0
     return -np.inf
-
 
 def lnlike(theta, x, y, yerr, transit_params, skip_priors=False):
     """
@@ -355,7 +535,7 @@ def lnlike(theta, x, y, yerr, transit_params, skip_priors=False):
 
 
 def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params,
-           skip_priors):
+           skip_priors, max_sigma=6.0e-3):
     """
     Log probability.
 
@@ -380,7 +560,7 @@ def lnprob(theta, x, y, yerr, lower_t_bound, upper_t_bound, transit_params,
 
     """
     lp = lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
-                 skip_priors)
+                 skip_priors, max_sigma)
     if not np.isfinite(lp):
         return -np.inf
     return lp + lnlike(theta, x, y, yerr, transit_params, skip_priors)
@@ -452,7 +632,7 @@ def spotted_transit_model_individuals(theta, times, transit_params):
 
 def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
                      n_walkers, output_path, burnin=0.7,
-                     n_extra_spots=1, skip_priors=False):
+                     n_extra_spots=1, skip_priors=False, max_sigma=6.0e-3):
     """
     Fit for transit depth and spot parameters given initial guess informed by
     results from `peak_finder`
@@ -507,7 +687,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
         realization = fit_params + 1e-5*np.random.randn(ndim)
 
         if not np.isinf(lnprior(realization, fluxes, lower_t_bound,
-                                upper_t_bound, transit_params, skip_priors)):
+                                upper_t_bound, transit_params, skip_priors, max_sigma)):
             pos.append(realization)
 
     print('Begin MCMC...')
@@ -520,7 +700,7 @@ def run_emcee_seeded(light_curve, transit_params, spot_parameters, n_steps,
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     args=(times, fluxes, errors, lower_t_bound,
                                           upper_t_bound, transit_params,
-                                          skip_priors),
+                                          skip_priors, max_sigma),
                                     pool=pool)
     sampler.run_mcmc(pos, n_steps)
     print('Finished MCMC...')
