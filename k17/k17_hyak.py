@@ -8,8 +8,8 @@ import os
 
 # Import dev version of friedrich:
 import sys
-sys.path.insert(0, '../')
-# sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
+# sys.path.insert(0, '../')
+sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, k17_params_morris,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
@@ -70,7 +70,7 @@ residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   transit_params, n_peaks=6, plots=True,
+                                   transit_params, n_peaks=6, plots=False,
                                    verbose=True)
 # This first spot model might miss the broadest spots
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
@@ -86,6 +86,6 @@ if best_fit_spot_params is not None:
     output_path = os.path.join(output_dir,
                                'chains{0:03d}.hdf5'.format(transit_number))
     sampler = run_emcee_seeded(lc, transit_params, best_fit_spot_params,
-                               n_steps=150, n_walkers=12,
+                               n_steps=15000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=0)
