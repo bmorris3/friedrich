@@ -27,11 +27,11 @@ submit_template = """#!/bin/bash
 #PBS -d {run_dir}
 
 ## GROUP to run under
-## PBS -W group_list=hyak-stf
-#PBS -q bf
+#PBS -W group_list=hyak-stf
+## PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=8,mem=20gb,feature=intel,feature=8core
+#PBS -l nodes=1:ppn=16,mem=20gb,feature=intel,feature=16core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
