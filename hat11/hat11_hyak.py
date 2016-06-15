@@ -8,7 +8,7 @@ import os
 
 # Import dev version of friedrich:
 import sys
-#sys.path.insert(0, '../')
+# sys.path.insert(0, '../')
 sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
 from friedrich.lightcurve import (LightCurve, hat11_params_morris,
                                   generate_lc_depth)
@@ -32,7 +32,6 @@ elif os.path.exists('/local/tmp/hat11'):
 else:
     raise ValueError('No input files found.')
 
-depth = 0.00343
 hat11_params = hat11_params_morris()
 
 # Construct light curve object from the raw data
@@ -53,28 +52,26 @@ for i, quarter_number, lc in zip(range(len(available_quarters)),
     smoothed_fluxes = gaussian_filter(fluxes, sigma=20)
     quarterly_maxes[quarter_number] = np.max(smoothed_fluxes)
 
-# Read from commmand line argument
+# Read from command line argument
 transit_number = int(sys.argv[1])
-
 lc = transits[transit_number]
-lc.subtract_polynomial_baseline(order=2, params=hat11_params)
-lc.fluxes += quarterly_maxes[lc.quarters[0]]
-lc.fluxes /= quarterly_maxes[lc.quarters[0]]
-lc.errors /= quarterly_maxes[lc.quarters[0]]
 
+lc.subtract_add_divide_without_outliers(params=hat11_params,
+                                        quarterly_max=quarterly_maxes[lc.quarters[0]],
+                                        plots=True)
 lc_output_path = os.path.join(output_dir,
                               'lc{0:03d}.txt'.format(transit_number))
 np.savetxt(lc_output_path, np.vstack([lc.times.jd, lc.fluxes, lc.errors]).T)
 
+# Delete sharp outliers prior to peak-finding
 lc.delete_outliers()
 
-# Subtract out a transit model
-transit_model = generate_lc_depth(lc.times_jd, depth, hat11_params)
+transit_model = generate_lc_depth(lc.times_jd, hat11_params.rp**2, hat11_params)
 residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   hat11_params, n_peaks=4, plots=False,
+                                   hat11_params, n_peaks=4, plots=True,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
                                            best_fit_spot_params)
@@ -87,4 +84,4 @@ if best_fit_spot_params is not None:
                                n_steps=15000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=0)
-
+#
