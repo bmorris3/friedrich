@@ -64,6 +64,10 @@ lc.fluxes += quarterly_maxes[lc.quarters[0]]
 lc.fluxes /= quarterly_maxes[lc.quarters[0]]
 lc.errors /= quarterly_maxes[lc.quarters[0]]
 
+lc_output_path = os.path.join(output_dir,
+                              'lc{0:03d}.txt'.format(transit_number))
+np.savetxt(lc_output_path, np.vstack([lc.times.jd, lc.fluxes, lc.errors]).T)
+
 # Subtract out a transit model
 transit_model = generate_lc_depth(lc.times_jd, depth, transit_params)
 residuals = lc.fluxes - transit_model
