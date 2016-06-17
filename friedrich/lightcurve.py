@@ -267,7 +267,7 @@ def hat11_params_morris_is_90():
     # Required by some friedrich methods below but not by batman:
     params.duration = j['duration']                   # transit duration
     params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
-    params.inc_stellar = 0.0    # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 90.0    # Sanchis-Ojeda & Winn 2011 (soln 1)
     params.per_rot = j['per_rot']     # Morris periodogram days
 
     params.rho_star = j['rho_star']
