@@ -58,7 +58,7 @@ lc = transits[transit_number]
 
 lc.subtract_add_divide_without_outliers(params=hat11_params,
                                         quarterly_max=quarterly_maxes[lc.quarters[0]],
-                                        plots=True)
+                                        plots=False)
 lc_output_path = os.path.join(output_dir,
                               'lc{0:03d}.txt'.format(transit_number))
 np.savetxt(lc_output_path, np.vstack([lc.times.jd, lc.fluxes, lc.errors]).T)
@@ -71,7 +71,7 @@ residuals = lc.fluxes - transit_model
 
 # Find peaks in the light curve residuals
 best_fit_spot_params = peak_finder(lc.times.jd, residuals, lc.errors,
-                                   hat11_params, n_peaks=4, plots=True,
+                                   hat11_params, n_peaks=4, plots=False,
                                    verbose=True)
 best_fit_gaussian_model = summed_gaussians(lc.times.jd,
                                            best_fit_spot_params)
