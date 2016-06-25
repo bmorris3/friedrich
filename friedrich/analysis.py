@@ -217,7 +217,7 @@ class MCMCResults(object):
         results = np.percentile(self.chains, [15.87, 50, 84.13], axis=0)
 
         spots = []
-        for spot in np.split(results[:, 1:].T, (self.chains.shape[1]-1)/3):
+        for spot in np.split(results.T, (self.chains.shape[1])/3):
             ampltiude, t0, sigma = map(lambda x: Measurement(*(x[1],
                                                                x[2]-x[1],
                                                                x[1]-x[0])),
