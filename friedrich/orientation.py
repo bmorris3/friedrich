@@ -519,6 +519,7 @@ def times_to_occulted_lat_lon(times, transit_params):
     """Only works for single time inputs at the moment"""
     X, Y, Z = planet_position_cartesian(times, transit_params)
     spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
+
     spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y,
                                                                  spot_z,
                                                                  transit_params,

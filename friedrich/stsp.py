@@ -31,7 +31,7 @@ infile_template_l = """#PLANET PROPERTIES
 {per_rot:2.10f}			; Stellar Rotation period (days)
 4780					; Stellar Temperature
 0.31					; Stellar metallicity
-{tilt_from_z:d}						; Tilt of the rotation axis of the star down from z-axis (degrees)
+{tilt_from_z:2.10f}						; Tilt of the rotation axis of the star down from z-axis (degrees)
 {nonlinear_ld}			; Limb darkening (4 coefficients)
 {n_ld_rings:d}			; number of rings for limb darkening appoximation
 #SPOT PROPERTIES
