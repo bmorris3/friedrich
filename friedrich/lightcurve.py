@@ -231,6 +231,188 @@ def hat11_params_morris_minus_15():
     return params
 
 
+def hat11_params_morris_is_90():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
+
+    params = batman.TransitParams()
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
+
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = j['duration']                   # transit duration
+    params.lam = j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 90.0    # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
+
+    # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    return params
+
+
+def hat11_params_morris_flip_lambda():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
+
+    params = batman.TransitParams()
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
+
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = j['duration']                   # transit duration
+    params.lam = j['lam'] + 180          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = j['inc_stellar']    # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
+
+    # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    return params
+
+def hat11_params_morris_experiment():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
+
+    params = batman.TransitParams()
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
+
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = j['duration']                   # transit duration
+    params.lam = j['lam'] + 180      # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = 180 + j['inc_stellar']    # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
+
+    # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    return params
+
+def hat11_params_morris_negative_lambda():
+    """
+    Transit light curve parameters from Brett for HAT-P-11. Some parameters
+    constrained by RVs from Winn et al. 2010 [1]_
+
+    Returns
+    -------
+    params : `~batman.TransitParams`
+        Transit parameters for HAT-P-11
+
+    .. [1] http://adsabs.harvard.edu/abs/2010ApJ...723L.223W
+    """
+    # ecosw = 0.261  # Winn et al. 2010
+    # esinw = 0.085  # Winn et al. 2010
+    # eccentricity = np.sqrt(ecosw**2 + esinw**2)
+    # omega = np.degrees(np.arctan2(esinw, ecosw))
+
+    #j = json.load(open('hat11_parameters.json'))
+    j = json.load(open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'hat11_parameters.json')))
+
+    params = batman.TransitParams()
+    params.t0 = j['t0']   # time of inferior conjunction
+    params.per = j['per']        # orbital period
+    params.rp = j['rp']       # planet radius (in units of stellar radii)
+    params.b = j['b']          # impact parameter
+    params.inc = j['inc']     # orbital inclination (in degrees)
+
+    params.ecc = j['ecc']      # eccentricity
+    params.w = j['w']              # longitude of periastron (in degrees)
+    params.a = j['a']         # semi-major axis (in units of stellar radii)
+    params.u = j['u']    # limb darkening coefficients
+    params.limb_dark = j['limb_dark'] # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = j['duration']                   # transit duration
+    params.lam = -1*j['lam']          # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.inc_stellar = j['inc_stellar']     # Sanchis-Ojeda & Winn 2011 (soln 1)
+    params.per_rot = j['per_rot']     # Morris periodogram days
+
+    params.rho_star = j['rho_star']
+
+    # params.lam = 121.0            # Sanchis-Ojeda & Winn 2011 (soln 2)
+    # params.inc_stellar = 168    # Sanchis-Ojeda & Winn 2011 (soln 2)
+    return params
+
+
 def hat11_params_morris_notransit():
     """
     Transit light curve parameters from Brett for HAT-P-11. Some parameters
@@ -689,6 +871,17 @@ class LightCurve(object):
         """
         return self.times.jd
 
+    def split_at_index(self, index):
+        """
+        Split the light curve into two light curves, at ``index``
+        """
+        return (LightCurve(times=self.times[:index], fluxes=self.fluxes[:index], 
+                           errors=self.errors[:index], quarters=self.quarters[:index], 
+                           name=self.name),
+                LightCurve(times=self.times[index:], fluxes=self.fluxes[index:], 
+                           errors=self.errors[index:], quarters=self.quarters[index:], 
+                           name=self.name))
+
 
 class TransitLightCurve(LightCurve):
     """
@@ -817,22 +1010,24 @@ class TransitLightCurve(LightCurve):
 
 
     def fit_polynomial_baseline(self, params, order=2, cadence=1*u.min,
-                                plots=False):
+                                plots=False, mask=None):
         """
         Find OOT portions of transit light curve using similar method to
         `LightCurve.mask_out_of_transit`, fit linear baseline to OOT
         """
+        if mask is None:
+            mask = np.ones(len(self.fluxes)).astype(bool)
         cadence_buffer = cadence.to(u.day).value
         get_oot_duration_fraction = 0
-        phased = (self.times.jd - params.t0) % params.per
+        phased = (self.times.jd[mask] - params.t0) % params.per
         near_transit = ((phased < params.duration*(0.5 + get_oot_duration_fraction) + cadence_buffer) |
                         (phased > params.per - params.duration*(0.5 + get_oot_duration_fraction) - cadence_buffer))
 
         # Remove polynomial baseline trend after subtracting the times by its
         # mean -- this improves numerical stability for polyfit
         downscaled_times = self.times.jd - self.times.jd.mean()
-        polynomial_baseline = np.polyfit(downscaled_times[-near_transit],
-                                         self.fluxes[-near_transit], order)
+        polynomial_baseline = np.polyfit(downscaled_times[mask][-near_transit],
+                                         self.fluxes[mask][-near_transit], order)
         polynomial_baseline_fit = np.polyval(polynomial_baseline, downscaled_times)
 
         if plots:
@@ -840,11 +1035,11 @@ class TransitLightCurve(LightCurve):
             ax[0].axhline(1, ls='--', color='k')
             ax[0].plot(self.times.jd, polynomial_baseline_fit, 'r')
             ax[0].plot(self.times.jd, self.fluxes, 'bo')
+            if mask is not None:
+                ax[0].plot(self.times.jd[~mask], self.fluxes[~mask], 'ro')
             plt.show()
 
         return polynomial_baseline_fit
-
-
 
     def subtract_polynomial_baseline(self, params, plots=False, order=2,
                                      cadence=1*u.min):
@@ -870,6 +1065,42 @@ class TransitLightCurve(LightCurve):
             ax[1].set_title('after trend removal')
             ax[1].axhline(1, ls='--', color='k')
             ax[1].plot(self.times.jd, self.fluxes, 'o')
+            plt.show()
+
+
+    def subtract_add_divide_without_outliers(self, params, quarterly_max,
+                                             order=2, cadence=1*u.min,
+                                             outlier_error_multiplier=50,
+                                             outlier_tolerance_depth_factor=0.20,
+                                             plots=False):
+
+        init_baseline_fit = self.fit_polynomial_baseline(order=order,
+                                                         cadence=cadence,
+                                                         params=params)
+
+        # Subtract out a transit model
+        transit_model = generate_lc_depth(self.times_jd, params.rp**2, params)
+
+        lower_outliers = (transit_model*init_baseline_fit - self.fluxes >
+                          self.fluxes.mean() * outlier_tolerance_depth_factor *
+                          params.rp**2)
+
+        self.errors[lower_outliers] *= outlier_error_multiplier
+
+        final_baseline_fit = self.fit_polynomial_baseline(order=order,
+                                                          cadence=cadence,
+                                                          params=params,
+                                                          mask=~lower_outliers)
+
+        self.fluxes = self.fluxes - final_baseline_fit
+        self.fluxes += quarterly_max
+        self.fluxes /= quarterly_max
+        self.errors /= quarterly_max
+
+        if plots:
+            plt.errorbar(self.times.jd, self.fluxes, self.errors, fmt='o')
+            plt.plot(self.times.jd[lower_outliers],
+                     self.fluxes[lower_outliers], 'rx')
             plt.show()
 
     @classmethod

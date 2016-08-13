@@ -10,7 +10,7 @@ import os
 import sys
 # sys.path.insert(0, '../')
 sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
-from friedrich.lightcurve import (LightCurve, hat11_params_morris,
+from friedrich.lightcurve import (LightCurve, hat11_params_morris_flip_lambda,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
 from scipy.ndimage import gaussian_filter
@@ -24,7 +24,7 @@ if os.path.exists('/Users/bmmorris/data/hat11/'):
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11_flip_lambda')
 elif os.path.exists('/local/tmp/hat11'):
     # on mist
     light_curve_paths = glob('/local/tmp/hat11/*slc.fits')
@@ -32,7 +32,7 @@ elif os.path.exists('/local/tmp/hat11'):
 else:
     raise ValueError('No input files found.')
 
-hat11_params = hat11_params_morris()
+hat11_params = hat11_params_morris_flip_lambda()
 
 # Construct light curve object from the raw data
 whole_lc = LightCurve.from_raw_fits(light_curve_paths, name='HAT11')

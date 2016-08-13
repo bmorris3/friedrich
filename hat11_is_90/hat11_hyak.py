@@ -8,9 +8,9 @@ import os
 
 # Import dev version of friedrich:
 import sys
-# sys.path.insert(0, '../')
+#sys.path.insert(0, '../')
 sys.path.insert(0, '/usr/lusers/bmmorris/git/friedrich/')
-from friedrich.lightcurve import (LightCurve, hat11_params_morris,
+from friedrich.lightcurve import (LightCurve, hat11_params_morris_is_90,
                                   generate_lc_depth)
 from friedrich.fitting import peak_finder, summed_gaussians, run_emcee_seeded
 from scipy.ndimage import gaussian_filter
@@ -24,7 +24,7 @@ if os.path.exists('/Users/bmmorris/data/hat11/'):
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11_is_90')
 elif os.path.exists('/local/tmp/hat11'):
     # on mist
     light_curve_paths = glob('/local/tmp/hat11/*slc.fits')
@@ -32,7 +32,7 @@ elif os.path.exists('/local/tmp/hat11'):
 else:
     raise ValueError('No input files found.')
 
-hat11_params = hat11_params_morris()
+hat11_params = hat11_params_morris_is_90()
 
 # Construct light curve object from the raw data
 whole_lc = LightCurve.from_raw_fits(light_curve_paths, name='HAT11')
@@ -52,20 +52,22 @@ for i, quarter_number, lc in zip(range(len(available_quarters)),
     smoothed_fluxes = gaussian_filter(fluxes, sigma=20)
     quarterly_maxes[quarter_number] = np.max(smoothed_fluxes)
 
-# Read from command line argument
+# Read from commmand line argument
 transit_number = int(sys.argv[1])
-lc = transits[transit_number]
 
-lc.subtract_add_divide_without_outliers(params=hat11_params,
-                                        quarterly_max=quarterly_maxes[lc.quarters[0]],
-                                        plots=False)
+lc = transits[transit_number]
+lc.subtract_polynomial_baseline(order=2, params=hat11_params)
+lc.fluxes += quarterly_maxes[lc.quarters[0]]
+lc.fluxes /= quarterly_maxes[lc.quarters[0]]
+lc.errors /= quarterly_maxes[lc.quarters[0]]
+
 lc_output_path = os.path.join(output_dir,
                               'lc{0:03d}.txt'.format(transit_number))
 np.savetxt(lc_output_path, np.vstack([lc.times.jd, lc.fluxes, lc.errors]).T)
 
-# Delete sharp outliers prior to peak-finding
 lc.delete_outliers()
 
+# Subtract out a transit model
 transit_model = generate_lc_depth(lc.times_jd, hat11_params.rp**2, hat11_params)
 residuals = lc.fluxes - transit_model
 
@@ -84,4 +86,4 @@ if best_fit_spot_params is not None:
                                n_steps=15000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=0)
-#
+

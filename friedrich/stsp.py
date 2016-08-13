@@ -13,7 +13,8 @@ from astropy.io import ascii
 from scipy.optimize import fmin
 import matplotlib.pyplot as plt
 
-stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
+#stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
+stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160808'
 
 infile_template_l = """#PLANET PROPERTIES
 1							; Number of planets -- (if there are more than 1 planet, then the set of 8 planet properties are repeated)
@@ -31,7 +32,7 @@ infile_template_l = """#PLANET PROPERTIES
 {per_rot:2.10f}			; Stellar Rotation period (days)
 4780					; Stellar Temperature
 0.31					; Stellar metallicity
-{tilt_from_z:d}						; Tilt of the rotation axis of the star down from z-axis (degrees)
+{tilt_from_z:2.10f}						; Tilt of the rotation axis of the star down from z-axis (degrees)
 {nonlinear_ld}			; Limb darkening (4 coefficients)
 {n_ld_rings:d}			; number of rings for limb darkening appoximation
 #SPOT PROPERTIES
@@ -49,7 +50,7 @@ l						; l= generate light curve from parameters
 1.00
 """
 
-spot_params_template = """{spot_radius:2.10}		; spot radius
+spot_params_template = """{spot_radius:2.10f}		; spot radius
 {spot_theta:2.10f}		; theta
 {spot_phi:2.10f}		; phi
 """
@@ -122,7 +123,7 @@ class STSP(object):
             if os.path.exists(abspath):
                 os.remove(abspath)
 
-    def stsp_lc(self, n_ld_rings=100, verbose=False):
+    def stsp_lc(self, n_ld_rings=100, verbose=False, t_bypass=False):
         self.safe_clean_up()
 
         # Normalize light curve to unity
@@ -135,7 +136,10 @@ class STSP(object):
         n_transits = np.rint(np.median((self.transit_params.t0 -
                                         self.lc.times.jd) /
                                        self.transit_params.per))
-        times = self.lc.times.jd + n_transits*self.transit_params.per
+        if not t_bypass: 
+            times = self.lc.times.jd + n_transits*self.transit_params.per
+        else: 
+            times = self.lc.times.jd
         fluxes = np.ones_like(times)
 
         np.savetxt(self.model_path,
@@ -196,8 +200,11 @@ class STSP(object):
         # Read the outputs
         tbl = ascii.read(os.path.join(self.outdir, 'test_lcout.txt'))
         stsp_times, stsp_fluxes = tbl['col1'], tbl['col4']
-        return stsp_times - n_transits*self.transit_params.per, stsp_fluxes
 
+        if not t_bypass:
+            return stsp_times - n_transits*self.transit_params.per, stsp_fluxes
+        else: 
+            return stsp_times, stsp_fluxes
 
 def spot_params_to_string(spot_params):
     spot_params_str = ""
