@@ -871,6 +871,17 @@ class LightCurve(object):
         """
         return self.times.jd
 
+    def split_at_index(self, index):
+        """
+        Split the light curve into two light curves, at ``index``
+        """
+        return (LightCurve(times=self.times[:index], fluxes=self.fluxes[:index], 
+                           errors=self.errors[:index], quarters=self.quarters[:index], 
+                           name=self.name),
+                LightCurve(times=self.times[index:], fluxes=self.fluxes[index:], 
+                           errors=self.errors[index:], quarters=self.quarters[index:], 
+                           name=self.name))
+
 
 class TransitLightCurve(LightCurve):
     """
