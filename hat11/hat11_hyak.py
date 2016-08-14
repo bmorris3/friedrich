@@ -84,4 +84,4 @@ if best_fit_spot_params is not None:
                                n_steps=15000, n_walkers=150,
                                output_path=output_path, burnin=0.6,
                                n_extra_spots=0)
-#
+

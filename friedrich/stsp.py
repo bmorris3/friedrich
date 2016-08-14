@@ -253,9 +253,12 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
                           mcmc.lc.errors[first_ind:]**2)
             return chi2
 
-        init_radii = np.zeros(len(thetas)) + 0.8*m.transit_params.rp
+        init_radii = np.zeros(len(thetas)) + 0.8 * m.transit_params.rp
 
-        best_radii = fmin(spot_chi2, init_radii[:])
+        from scipy.optimize import fmin_powell, fmin_bfgs
+        #best_radii = fmin(spot_chi2, init_radii[:])
+        best_radii = fmin_powell(spot_chi2, init_radii[:], xtol=1e-5, ftol=1e-5)
+        #best_radii = fmin_bfgs(spot_chi2, init_radii[:])
 
         if len(best_radii.shape) == 0:
             best_radii = [best_radii.tolist()]
@@ -276,19 +279,19 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
         with open(stsp_out_path, 'w') as stsp_params_file:
             stsp_params_file.write(stsp_params_out)
 
-        # fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
-        # minjdint = int(np.min(m.lc.times.jd))
-        # ax[0].plot(m.lc.times.jd - minjdint, m.lc.fluxes, 'k.')
-        # ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
-        # ax[0].set(ylabel='Flux',
-        #           xlim=(np.min(m.lc.times.jd - minjdint),
-        #                 np.max(m.lc.times.jd - minjdint)),
-        #           ylim=(0.995, 1.001),
-        #           title='{0}'.format(m.index))
-        # ax[1].set(xlabel='JD - {0}'.format(minjdint), ylabel='Residuals')
-        #
-        # ax[1].plot(m.lc.times.jd - minjdint, m.lc.fluxes - best_f, 'k.')
-        # ax[1].axhline(0, ls='--', color='r')
-        # fig.tight_layout()
-        #plt.savefig('tmp/{0}.png'.format(m.index), bbox_inches='tight')
-        #plt.close()
+        fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
+        minjdint = int(np.min(m.lc.times.jd))
+        ax[0].plot(m.lc.times.jd - minjdint, m.lc.fluxes, 'k.')
+        ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
+        ax[0].set(ylabel='Flux',
+                   xlim=(np.min(m.lc.times.jd - minjdint),
+                         np.max(m.lc.times.jd - minjdint)),
+                   ylim=(0.995, 1.001),
+                   title='{0}'.format(m.index))
+        ax[1].set(xlabel='JD - {0}'.format(minjdint), ylabel='Residuals')
+        
+        ax[1].plot(m.lc.times.jd - minjdint, m.lc.fluxes - best_f, 'k.')
+        ax[1].axhline(0, ls='--', color='r')
+        fig.tight_layout()
+        plt.savefig('tmp/{0}.png'.format(m.index), bbox_inches='tight')
+        plt.close()

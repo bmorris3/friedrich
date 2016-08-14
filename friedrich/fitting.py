@@ -106,7 +106,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
     # http://stackoverflow.com/a/25666951
     # Convolve residuals with a gaussian, find relative maxima
     n_points_kernel = 100
-    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=10)
+    window = signal.general_gaussian(n_points_kernel+1, p=1, sig=2.5)
     filtered = signal.fftconvolve(window, residuals)
     filtered = (np.max(residuals) / np.max(filtered)) * filtered
     filtered = np.roll(filtered, int(-n_points_kernel/2))[:len(residuals)]
@@ -126,34 +126,32 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
     else:
         highest_maxes_in_transit = maxes_in_transit
 
-    # plt.plot(times, filtered)
-    # plt.plot(times, residuals, '.')
-    # plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
-    # [plt.axvline(times[m], color='k') for m in maxes]
-    # [plt.axvline(times[m], color='m') for m in maxes_in_transit]
-    # if len(maxes_in_transit) > n_peaks:
-    #     [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
-    # plt.axvline(upper_t_bound, color='r')
-    # plt.axvline(lower_t_bound, color='r')
-    # plt.show()
-
     if len(maxes_in_transit) == 0:
         if verbose:
             print('no maxes found')
         return None
 
     peak_times = times[highest_maxes_in_transit]
-    peak_amplitudes = residuals[highest_maxes_in_transit]
-    peak_sigmas = np.zeros(len(peak_times)) + 2./60/24  # 3 min
+    peak_amplitudes = 1.5 * residuals[highest_maxes_in_transit]
+    peak_sigmas = np.zeros(len(peak_times)) + 2.5/60/24  # 3 min
     input_parameters = np.vstack([peak_amplitudes, peak_times,
                                   peak_sigmas]).T.ravel()
 
-    result = optimize.fmin_powell(peak_finder_chi2, input_parameters,
-                                  disp=False, args=(times, residuals, errors),
-                                  xtol=0.00001, ftol=0.00001)
+    if False:
+        plt.plot(times, filtered)
+        plt.plot(times, residuals, '.')
+        plt.plot(times[maxes_in_transit], filtered[maxes_in_transit], 'ro')
+        [plt.axvline(times[m], color='k') for m in maxes]
+        [plt.axvline(times[m], color='m') for m in maxes_in_transit]
+        if len(maxes_in_transit) > n_peaks:
+            [plt.axvline(times[m], color='b') for m in highest_maxes_in_transit]
+        plt.axvline(upper_t_bound, color='r')
+        plt.axvline(lower_t_bound, color='r')
+        plt.plot(times, summed_gaussians(times, input_parameters), 'm')
+        plt.show()
 
-    # if np.all(result == input_parameters):
-    #     print('oh no!, fmin didnt produce a fit')
+    result = optimize.fmin_bfgs(peak_finder_chi2, input_parameters,
+                                  disp=False, args=(times, residuals, errors))
 
     # Only use gaussians that occur in transit (fmin fit is unbounded in time)
     # and amplitude is positive:
@@ -177,6 +175,7 @@ def peak_finder(times, residuals, errors, transit_params, n_peaks=4,
         ax[0].errorbar(times, residuals, fmt='.', color='k')
         [ax[0].axvline(t) for t in result_in_transit[1::3]]
         ax[0].plot(times, summed_gaussians(times, input_parameters), 'r')
+        ax[0].plot(times, filtered, color='g')
         ax[0].axhline(0, color='k', ls='--')
         ax[0].set_ylabel('Transit Residuals')
 
@@ -314,7 +313,7 @@ def lnprior(theta, y, lower_t_bound, upper_t_bound, transit_params,
     sigmas = spot_params[2::3]
     depth = transit_params.rp**2
 
-    min_sigma = 1.5/60/24
+    min_sigma = 1.0/60/24
     max_sigma = transit_params.duration  # 6.0e-3  # upper_t_bound - lower_t_bound
     t0_ok = ((lower_t_bound < t0s) & (t0s < upper_t_bound)).all()
     sigma_ok = ((min_sigma < sigmas) & (sigmas < max_sigma)).all()
