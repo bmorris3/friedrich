@@ -4,7 +4,6 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 import matplotlib.pyplot as plt
 import batman
-from astropy.coordinates import SphericalRepresentation, CartesianRepresentation
 import astropy.units as u
 from astropy.constants import G
 
@@ -150,7 +149,8 @@ def unit_circle(theta):
 
 def R_x(x, y, z, alpha):
     """
-    Rotation matrix for rotation about the x axis
+    Rotate the X-axis counter-clockwise by ``alpha``  when looking towards the
+    origin
 
     Parameters
     ----------
@@ -158,7 +158,7 @@ def R_x(x, y, z, alpha):
     y : `np.ndarray` with dims (1, N)
     z : `np.ndarray` with dims (1, N)
     alpha : float
-        angle [radians] to rotate about the `x` axis counterclockwise
+        angle [radians] to rotate
 
     Returns
     -------
@@ -184,7 +184,8 @@ def R_x(x, y, z, alpha):
 
 def R_y(x, y, z, alpha=0):
     """
-    Rotation matrix for rotation about the y axis
+    Rotate the Y-axis counter-clockwise by ``alpha``  when looking towards the
+    origin
 
     Parameters
     ----------
@@ -192,7 +193,7 @@ def R_y(x, y, z, alpha=0):
     y : `np.ndarray` with dims (1, N)
     z : `np.ndarray` with dims (1, N)
     alpha : float
-        angle [radians] to rotate about the `y` axis counterclockwise
+        angle [radians] to rotate
 
     Returns
     -------
@@ -218,7 +219,8 @@ def R_y(x, y, z, alpha=0):
 
 def R_z(x, y, z, alpha=0):
     """
-    Rotation matrix for rotation about the z axis
+    Rotate the Z-axis counter-clockwise by ``alpha``  when looking towards the
+    origin
 
     Parameters
     ----------
@@ -226,7 +228,7 @@ def R_z(x, y, z, alpha=0):
     y : `np.ndarray` with dims (1, N)
     z : `np.ndarray` with dims (1, N)
     alpha : float
-        angle [radians] to rotate about the `z` axis counterclockwise
+        angle [radians] to rotate
 
     Returns
     -------
@@ -248,10 +250,6 @@ def R_z(x, y, z, alpha=0):
     y2.resize(original_shape)
     z2.resize(original_shape)
     return x2, y2, z2
-
-
-#def sky_cartesian_to_spherical_polar(X, Y, Z):
-#    return R_z(*R_x(X, Y, Z, alpha=np.pi/2), alpha=np.pi/2)
 
 
 def planet_pos_to_stellar_surf(X, Y, Z):
@@ -284,11 +282,9 @@ def planet_pos_to_stellar_surf(X, Y, Z):
 
 def cartesian_to_spherical(x, y, z):
     r = np.sqrt(x**2 + y**2 + z**2)
-    theta = np.arctan2(y, x)
-    phi = np.arccos(z/r)
+    theta = np.arccos(z / r)
+    phi = np.arctan2(y, x)
 
-    #correct_these_thetas = theta < 0
-    #theta[correct_these_thetas] += 2*np.pi
     return r, theta, phi
 
 
@@ -315,6 +311,7 @@ def spherical_to_latlon(r, theta, phi):
     latitude = 90 - np.degrees(phi)
     longitude = np.degrees(theta)
     return latitude, longitude
+
 
 def pysyzygy_example():
     """
@@ -387,16 +384,6 @@ def project_planet_to_stellar_surface(x, y):
     return x, y, projected_z
 
 
-# def observer_view_to_stellar_view(x, y, z, transit_params):
-#     """
-#     First rotate to remove lambda (rotation about z-axis).
-#     Then rotate to remove i_s (rotation about x-axis).
-#     """
-#     i_star = np.radians(transit_params.inc_stellar)
-#     lam_star = np.radians(transit_params.lam)
-#     x_p, y_p, z_p = R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star)
-#     return x_p, y_p, z_p
-
 def observer_view_to_stellar_view(x, y, z, transit_params, times,
                                   stellar_t0=0.0):
     """
@@ -416,51 +403,6 @@ def observer_view_to_stellar_view(x, y, z, transit_params, times,
                                (np.abs(t_mean - stellar_t0) % per_rot)))
     return x_p, y_p, z_p
 
-
-def observer_view_to_stsp_view(x, y, z, transit_params, times):
-    """
-    First rotate to remove lambda (rotation about z-axis). Then rotate to
-    remove i_s (rotation about x-axis). Then rotate one last time to remove
-    stellar rotation with time (rotation about z-axis again) by using STSP's
-    convention that the longitude=0 is centered on the star at mid-transit
-    """
-
-    i_star = np.radians(transit_params.inc_stellar)
-    lam_star = np.radians(transit_params.lam)
-    per_rot = transit_params.per_rot
-    t_mean = np.mean(times)
-
-    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
-                             alpha=-i_star),
-#first                            alpha=(-2*np.pi/per_rot * # -np.pi
-#second                        alpha=(-np.pi - 2*np.pi/per_rot *
-#third                             alpha=(np.pi - 2*np.pi/per_rot *
-                             alpha=(-np.pi/2))# + 2*np.pi/per_rot * # -np.pi
-                                  # (np.abs(t_mean - transit_params.t0) % per_rot)))
-    return x_p, y_p, z_p
-
-def observer_view_to_stsp_view_diagnostic(x, y, z, transit_params, times):
-    """
-    First rotate to remove lambda (rotation about z-axis). Then rotate to
-    remove i_s (rotation about x-axis). Then rotate one last time to remove
-    stellar rotation with time (rotation about z-axis again) by using STSP's
-    convention that the longitude=0 is centered on the star at mid-transit
-    """
-
-    i_star = np.radians(transit_params.inc_stellar)
-    lam_star = np.radians(transit_params.lam)
-    per_rot = transit_params.per_rot
-    t_mean = np.mean(times)
-
-    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
-                             alpha=-i_star),
-#first                            alpha=(-2*np.pi/per_rot * # -np.pi
-#second                        alpha=(-np.pi - 2*np.pi/per_rot *
-#third                             alpha=(np.pi - 2*np.pi/per_rot *
-                             alpha=(-np.pi/2))# + 2*np.pi/per_rot * # -np.pi
-                                #    (np.abs(t_mean - transit_params.t0) % per_rot)))
-    return x_p, y_p, z_p, (np.pi/2 + 2*np.pi/per_rot * # -np.pi
-                           (np.abs(t_mean - transit_params.t0) % per_rot))
 
 def get_lat_lon_grid(n_points, transit_params, transit_view=True):
     """
@@ -515,6 +457,7 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
 
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
 
+
 def times_to_occulted_lat_lon(times, transit_params):
     """Only works for single time inputs at the moment"""
     X, Y, Z = planet_position_cartesian(times, transit_params)
@@ -524,9 +467,11 @@ def times_to_occulted_lat_lon(times, transit_params):
                                                                  spot_z,
                                                                  transit_params,
                                                                  times)
-    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
-    longitude = spot_theta
-    latitude = np.pi/2 - spot_phi
+    spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s,
+                                                          spot_y_s, spot_z_s)
+    longitude = spot_phi
+    latitude = np.pi/2 - spot_theta
+
     return latitude, longitude
 
 
