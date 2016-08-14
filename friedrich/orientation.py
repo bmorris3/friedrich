@@ -397,10 +397,9 @@ def observer_view_to_stellar_view(x, y, z, transit_params, times,
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
 
-    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star),
-                             alpha=-i_star),
+    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star), 
                         alpha=(-2*np.pi/per_rot *
-                               (np.abs(t_mean - stellar_t0) % per_rot)))
+                               (np.abs(t_mean - transit_params.t0) % per_rot)))
     return x_p, y_p, z_p
 
 

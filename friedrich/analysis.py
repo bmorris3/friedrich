@@ -10,13 +10,12 @@ from .fitting import spotted_transit_model, spotted_transit_model_individuals, g
 from .storage import read_results_archive
 from .lightcurve import TransitLightCurve
 from .orientation import (planet_position_cartesian, spherical_to_latlon,
-                          project_planet_to_stellar_surface,
-                          observer_view_to_stsp_view_diagnostic)
+                          project_planet_to_stellar_surface)
 from .orientation import (plot_lat_lon_gridlines,
                           observer_view_to_stellar_view,
                           unit_circle, cartesian_to_spherical,
                           get_lat_lon_grid, times_to_occulted_lat_lon,
-                          observer_view_to_stsp_view)
+                          observer_view_to_stellar_view)
 
 from astroML.plotting import plot_tissot_ellipse
 from scipy.optimize import fmin_powell
@@ -497,53 +496,18 @@ class MCMCResults(object):
         for t in spot_times:
             X, Y, Z = planet_position_cartesian([t], self.transit_params)
             spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x,
-                                                                      spot_y,
-                                                                      spot_z,
-                                                                      self.transit_params,
-                                                                      [t])
+            spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x,
+                                                                         spot_y,
+                                                                         spot_z,
+                                                                         self.transit_params,
+                                                                         [t])
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
             spot_phis.append(spot_phi[0])
             spot_thetas.append(spot_theta[0])
 
-        stsp_thetas = np.array(spot_phis)
-        stsp_phis = np.array(spot_thetas)
-        correct_these_phis = stsp_phis < 0
-        stsp_phis[correct_these_phis] += 2*np.pi
-
+        stsp_phis = np.array(spot_phis)
+        stsp_thetas = np.array(spot_thetas)
         return stsp_thetas, stsp_phis
-
-    def max_lnp_theta_phi_stsp_diagnostic(self):
-        spot_times = self.best_params[1::3]
-        spot_phis = []
-        spot_thetas = []
-        rot_angles = []
-        for t in spot_times:
-            X, Y, Z = planet_position_cartesian([t], self.transit_params)
-            spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
-            # spot_x_s, spot_y_s, spot_z_s = observer_view_to_stsp_view(spot_x,
-            #                                                           spot_y,
-            #                                                           spot_z,
-            #                                                           self.transit_params,
-            #                                                           [t])
-
-            spot_x_s, spot_y_s, spot_z_s, rotangle = observer_view_to_stsp_view_diagnostic(spot_x,
-                                                                      spot_y,
-                                                                      spot_z,
-                                                                      self.transit_params,
-                                                                      [t])
-
-            rot_angles.append(rotangle)
-            spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
-            spot_phis.append(spot_phi[0])
-            spot_thetas.append(spot_theta[0])
-
-        stsp_thetas = np.array(spot_phis)
-        stsp_phis = np.array(spot_thetas)
-        correct_these_phis = stsp_phis < 0
-        stsp_phis[correct_these_phis] += 2*np.pi
-        
-        return stsp_thetas, stsp_phis, rot_angles
 
     def to_stsp_in(self):
         thetas, phis = self.max_lnp_theta_phi_stsp()
