@@ -3,7 +3,7 @@
     "fp": null, 
     "b": 0.143443142704645, 
     "ecc": 0.2744922585429323, 
-    "inc_stellar": 80, 
+    "inc_stellar": 100.0, 
     "rho_star": 1.8082748494218275, 
     "limb_dark": "quadratic", 
     "per": 4.8878025843894006, 

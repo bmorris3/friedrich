@@ -14,7 +14,8 @@ from scipy.optimize import fmin
 import matplotlib.pyplot as plt
 
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
-stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160808'
+#stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160808'
+stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160815'
 
 infile_template_l = """#PLANET PROPERTIES
 1							; Number of planets -- (if there are more than 1 planet, then the set of 8 planet properties are repeated)
@@ -227,6 +228,8 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
         m = MCMCResults(path, transit_params)
         thetas, phis = m.max_lnp_theta_phi_stsp()
 
+        phis[phis < 0] += 2*np.pi
+
         def spot_model(radii, mcmc, thetas=thetas, phis=phis):
             if len(thetas) > 1:
                 spot_params = []
@@ -250,19 +253,18 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
                     if np.abs(t_model.data[0] - time) < eps:
                         first_ind = ind
             chi2 = np.sum((mcmc.lc.fluxes[first_ind:] - f_model)**2 /
-                          mcmc.lc.errors[first_ind:]**2)
+                           mcmc.lc.errors[first_ind:]**2)
             return chi2
 
-        init_radii = np.zeros(len(thetas)) + 0.8 * m.transit_params.rp
+        init_radii = np.zeros(len(thetas)) + 0.4 * m.transit_params.rp
 
-        from scipy.optimize import fmin_powell, fmin_bfgs
-        #best_radii = fmin(spot_chi2, init_radii[:])
-        best_radii = fmin_powell(spot_chi2, init_radii[:], xtol=1e-5, ftol=1e-5)
-        #best_radii = fmin_bfgs(spot_chi2, init_radii[:])
+        from scipy.optimize import fmin
+        best_radii = fmin(spot_chi2, init_radii[:], xtol=1e-8)
 
         if len(best_radii.shape) == 0:
             best_radii = [best_radii.tolist()]
 
+        init_t, init_f = spot_model(init_radii, m)
         best_t, best_f = spot_model(best_radii, m)
 
         if len(thetas) > 1:
@@ -281,7 +283,8 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
 
         fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
         minjdint = int(np.min(m.lc.times.jd))
-        ax[0].plot(m.lc.times.jd - minjdint, m.lc.fluxes, 'k.')
+        ax[0].errorbar(m.lc.times.jd - minjdint, m.lc.fluxes, m.lc.errors, color='k', fmt='.')
+        ax[0].plot(best_t - minjdint, init_f, 'g', lw=1)
         ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
         ax[0].set(ylabel='Flux',
                    xlim=(np.min(m.lc.times.jd - minjdint),
