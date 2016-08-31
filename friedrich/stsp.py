@@ -125,8 +125,11 @@ class STSP(object):
             if os.path.exists(abspath):
                 os.remove(abspath)
 
-    def stsp_lc(self, n_ld_rings=100, verbose=False, t_bypass=False):
+    def stsp_lc(self, n_ld_rings=100, verbose=False, t_bypass=False, stsp_exec=None):
         self.safe_clean_up()
+
+        if stsp_exec is None:
+            stsp_exec = stsp_executable
 
         # Normalize light curve to unity
         real_max = 1
@@ -193,7 +196,7 @@ class STSP(object):
         os.chdir(self.outdir)
         # stdout = subprocess.check_output([stsp_executable,
         #                                   os.path.join(self.outdir, 'test.in')])
-        stdout = subprocess.check_output([stsp_executable,
+        stdout = subprocess.check_output([stsp_exec,
                                           'test.in'])
         if verbose:
             print(stdout.decode('ascii'))
