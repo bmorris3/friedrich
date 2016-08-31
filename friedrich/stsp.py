@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160808'
-stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160815'
+#stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160815'
+stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160828'
 
 infile_template_l = """#PLANET PROPERTIES
 1							; Number of planets -- (if there are more than 1 planet, then the set of 8 planet properties are repeated)
@@ -229,72 +230,72 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
         thetas, phis = m.max_lnp_theta_phi_stsp()
 
         phis[phis < 0] += 2*np.pi
-
-        def spot_model(radii, mcmc, thetas=thetas, phis=phis):
-            if len(thetas) > 1:
-                spot_params = []
-                for r, t, p in zip(radii, thetas, phis):
-                    spot_params.extend([r, t, p])
-            else:
-                spot_params = [radii[0], thetas[0], phis[0]]
-
-
-            s = STSP(mcmc.lc, mcmc.transit_params, spot_params)
-            t_model, f_model = s.stsp_lc()
-            return t_model, f_model
-
-        def spot_chi2(radii, mcmc=m):
-            t_model, f_model = spot_model(radii, mcmc=mcmc)
-
-            first_ind = 0
-            eps = 1e-5
-            if np.abs(t_model.data[0] - mcmc.lc.times.jd[0]) > eps:
-                for ind, time in enumerate(mcmc.lc.times.jd):
-                    if np.abs(t_model.data[0] - time) < eps:
-                        first_ind = ind
-            chi2 = np.sum((mcmc.lc.fluxes[first_ind:] - f_model)**2 /
-                           mcmc.lc.errors[first_ind:]**2)
-            return chi2
-
-        init_radii = np.zeros(len(thetas)) + 0.4 * m.transit_params.rp
-
-        from scipy.optimize import fmin
-        best_radii = fmin(spot_chi2, init_radii[:], xtol=1e-8)
-
-        if len(best_radii.shape) == 0:
-            best_radii = [best_radii.tolist()]
-
-        init_t, init_f = spot_model(init_radii, m)
-        best_t, best_f = spot_model(best_radii, m)
-
         if len(thetas) > 1:
+
+            def spot_model(radii, mcmc, thetas=thetas, phis=phis):
+                if len(thetas) > 1:
+                    spot_params = []
+                    for r, t, p in zip(radii, thetas, phis):
+                        spot_params.extend([r, t, p])
+                else:
+                    spot_params = [radii[0], thetas[0], phis[0]]
+
+
+                s = STSP(mcmc.lc, mcmc.transit_params, spot_params)
+                t_model, f_model = s.stsp_lc()
+                return t_model, f_model
+
+            def spot_chi2(radii, mcmc=m):
+                t_model, f_model = spot_model(radii, mcmc=mcmc)
+
+                first_ind = 0
+                eps = 1e-5
+                if np.abs(t_model.data[0] - mcmc.lc.times.jd[0]) > eps:
+                    for ind, time in enumerate(mcmc.lc.times.jd):
+                        if np.abs(t_model.data[0] - time) < eps:
+                            first_ind = ind
+                chi2 = np.sum((mcmc.lc.fluxes[first_ind:] - f_model)**2 /
+                               mcmc.lc.errors[first_ind:]**2)
+                return chi2
+
+            init_radii = np.zeros(len(thetas)) + 0.4 * m.transit_params.rp
+
+            from scipy.optimize import fmin
+            best_radii = fmin(spot_chi2, init_radii[:], xtol=1e-8)
+
+            if len(best_radii.shape) == 0:
+                best_radii = [best_radii.tolist()]
+
+            init_t, init_f = spot_model(init_radii, m)
+            best_t, best_f = spot_model(best_radii, m)
+
             spot_params_out = []
             for r, t, p in zip(best_radii, thetas, phis):
                 spot_params_out.extend([r, t, p])
 
-        stsp_params_out = spot_params_to_string(np.array(spot_params_out))
+            stsp_params_out = spot_params_to_string(np.array(spot_params_out))
 
-        transit_number = int(m.index.split('chains')[1])
+            transit_number = int(m.index.split('chains')[1])
 
-        stsp_out_path = os.path.join(results_dir,
-                                     'stsp_spots{0:03d}.txt'.format(transit_number))
-        with open(stsp_out_path, 'w') as stsp_params_file:
-            stsp_params_file.write(stsp_params_out)
+            stsp_out_path = os.path.join(results_dir,
+                                         'stsp_spots{0:03d}.txt'.format(transit_number))
+            with open(stsp_out_path, 'w') as stsp_params_file:
+                stsp_params_file.write(stsp_params_out)
 
-        fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
-        minjdint = int(np.min(m.lc.times.jd))
-        ax[0].errorbar(m.lc.times.jd - minjdint, m.lc.fluxes, m.lc.errors, color='k', fmt='.')
-        ax[0].plot(best_t - minjdint, init_f, 'g', lw=1)
-        ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
-        ax[0].set(ylabel='Flux',
-                   xlim=(np.min(m.lc.times.jd - minjdint),
-                         np.max(m.lc.times.jd - minjdint)),
-                   ylim=(0.995, 1.001),
-                   title='{0}'.format(m.index))
-        ax[1].set(xlabel='JD - {0}'.format(minjdint), ylabel='Residuals')
-        
-        ax[1].plot(m.lc.times.jd - minjdint, m.lc.fluxes - best_f, 'k.')
-        ax[1].axhline(0, ls='--', color='r')
-        fig.tight_layout()
-        plt.savefig('tmp/{0}.png'.format(m.index), bbox_inches='tight')
-        plt.close()
+            fig, ax = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
+            minjdint = int(np.min(m.lc.times.jd))
+            ax[0].errorbar(m.lc.times.jd - minjdint, m.lc.fluxes, m.lc.errors, color='k', fmt='.')
+            ax[0].plot(best_t - minjdint, init_f, 'g', lw=1)
+            ax[0].plot(best_t - minjdint, best_f, 'r', lw=2)
+            ax[0].set(ylabel='Flux',
+                       xlim=(np.min(m.lc.times.jd - minjdint),
+                             np.max(m.lc.times.jd - minjdint)),
+                       ylim=(0.995, 1.001),
+                       title='{0}'.format(m.index))
+            ax[1].set(xlabel='JD - {0}'.format(minjdint), ylabel='Residuals')
+
+            ax[1].plot(m.lc.times.jd - minjdint, m.lc.fluxes - best_f, 'k.')
+            ax[1].axhline(0, ls='--', color='r')
+            fig.tight_layout()
+            plt.savefig('tmp/{0}.png'.format(m.index), bbox_inches='tight')
+            plt.close()

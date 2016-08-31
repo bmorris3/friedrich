@@ -157,12 +157,19 @@ class MCMCResults(object):
                           (self.lc.fluxes - cumulative_models[-1])/self.transit_params.rp**2,
                           'k.')
 
-            for indiv_model, c in zip(individual_models, spot_colors):
+            spots__ = self.get_spots()
+
+            spots__ = sorted(spots__, key=lambda spot: -spot.amplitude.value)
+
+            for i, indiv_model, c in zip(range(len(individual_models)), individual_models, spot_colors):
                 ax[0, 1].fill_between(self.lc.times.jd, indiv_model, no_spots_model,
                                       color=c, alpha=0.4)
                 ax[1, 1].fill_between(self.lc.times.jd,
                                       (indiv_model - no_spots_model)/self.transit_params.rp**2,
                                       0, color=c, alpha=0.4)
+                # spot_lower = spots__[i].t0.value - spots__[i].sigma.value
+                # spot_upper = spots__[i].t0.value + spots__[i].sigma.value
+                # ax[1, 1].axvspan(spot_lower, spot_upper, color=c, alpha=0.2)
 
         delta_chi2s = np.zeros(len(cumulative_models))
         cumulative_BICs = np.zeros(len(cumulative_models))
@@ -206,7 +213,157 @@ class MCMCResults(object):
 
             fig.tight_layout()
             ax[0, 1].set_title('{0}'.format(self.index))
-        return delta_BICs
+        if not plots:
+            return delta_BICs
+        if plots:
+            return delta_BICs, ax
+
+    def get_spots_filtered(self, plots=True):
+
+        # Sort spot properties by amplitude (as proxy for robustness)
+        # spot_params = self.best_params
+        # split_spot_params = np.split(spot_params, len(spot_params)/3)
+        # spots = [Spot(amplitude=single_spot_params[0], t0=single_spot_params[1],
+        #               sigma=single_spot_params[2])
+        #          for single_spot_params in split_spot_params]
+
+        spots = self.get_spots()
+
+
+        # Filter out spots that are small amplitude, wide sigma
+        spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
+                                 for spot in spots])
+
+        # Filter out spots that don't contribute significantly to the fit:
+        spots_significant = np.array([spot.delta_BIC > 10 for spot in spots])
+
+        # Filter out overlapping or unresolved spots:
+        valid_spot_shapes = spots_significant & spots_skinny
+        validated_spots = [spot for spot, valid in zip(spots, valid_spot_shapes)
+                           if valid]
+
+        # Now search for overlapping spots:
+        overlapping_pairs, spots_with_overlap, spots_without_overlap = self.find_overlapping_spots(validated_spots)
+
+        check_these_spots = deepcopy(validated_spots)
+
+        # Iteratively repair overlapping spots until none are left:
+        while len(overlapping_pairs) > 0:
+            print(len(overlapping_pairs), ' spots to fix')
+            spot_pair = overlapping_pairs.pop(0)
+            spot_a = check_these_spots[spot_pair[0]]
+            spot_b = check_these_spots[spot_pair[1]]
+
+            area_a = self.integral_of_occultation(spot_a)
+            area_b = self.integral_of_occultation(spot_b)
+
+            frac_area_a = area_a / (area_a + area_b)
+            frac_area_b = area_b / (area_a + area_b)
+
+            print(frac_area_a, frac_area_b)
+
+            all_other_spots = [spot for i, spot in enumerate(check_these_spots)
+                               if i not in spot_pair]
+
+            new_time = spot_a.t0.value * frac_area_a + spot_b.t0.value * frac_area_b
+            new_amp = spot_a.amplitude.value if frac_area_a > 0.5 else spot_b.amplitude.value
+            new_sigma = spot_a.sigma.value * frac_area_a + spot_b.sigma.value * frac_area_b
+            # new_sigma = np.max([spot_a.sigma.value, spot_b.sigma.value])
+            new_BIC = np.max([spot_a.delta_BIC, spot_b.delta_BIC])
+            new_spot = Spot(Measurement(new_amp), Measurement(new_time),
+                            Measurement(new_sigma), new_BIC)
+            all_other_spots.append(new_spot)
+
+            check_these_spots = deepcopy(all_other_spots)
+
+            overlapping_pairs, spots_with_overlap, spots_without_overlap = self.find_overlapping_spots(check_these_spots)
+
+
+        # Now the spots have been scrubbed of overlaps:
+        non_overlapping_spots = deepcopy(check_these_spots)
+
+        # Vet the non-overlapping spots to make sure they meet the original priors
+        spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
+                                 for spot in non_overlapping_spots])
+
+        # Filter out spots that don't contribute significantly to the fit:
+        spots_significant = np.array([spot.delta_BIC > 10
+                                      for spot in non_overlapping_spots])
+
+        # Doesn't work on 033
+        # Filter out overlapping or unresolved spots:
+        if len(non_overlapping_spots) > 0:
+            valid_spot_shapes = spots_significant & spots_skinny
+            final_filtered_spots = [spot for spot, valid in zip(non_overlapping_spots,
+                                                                valid_spot_shapes)
+                                    if valid]
+        else:
+            final_filtered_spots = []
+
+        ## Plot results:
+        if plots and len(final_filtered_spots) > 0:
+
+            amp_sorted_best_params = []
+            cumulative_spot_params = [[] for i in range(len(final_filtered_spots))]
+            for i, spot in enumerate(final_filtered_spots):
+                amp_sorted_best_params.extend([spot.amplitude.value, spot.t0.value, spot.sigma.value])
+                for j in range(i, len(final_filtered_spots)):
+                        cumulative_spot_params[j].extend([spot.amplitude.value, spot.t0.value, spot.sigma.value])
+
+            cumulative_models = [spotted_transit_model(spot_params, self.lc.times.jd,
+                                                       self.transit_params)
+                                 for spot_params in cumulative_spot_params]
+
+            individual_models = spotted_transit_model_individuals(np.array(amp_sorted_best_params),
+                                                                  self.lc.times.jd,
+                                                                  self.transit_params)
+
+            no_spots_model = generate_lc(self.lc.times.jd, self.transit_params)
+
+            spot_colors = ['#0079a3', '#41ad49', '#dcc455', '#f4931f', '#58595b']
+
+            fig, ax = plt.subplots(2, 1, figsize=(6, 12), sharex=True)
+            # original goldenrod: #f5da5f
+            ax[0].plot(self.lc.times.jd, cumulative_models[-1],
+                          color='k', lw=2, alpha=0.6)
+            ax[0].plot(self.lc.times.jd, self.lc.fluxes, 'k.')
+            ax[1].plot(self.lc.times.jd,
+                          (self.lc.fluxes - cumulative_models[-1])/self.transit_params.rp**2,
+                          'k.')
+
+            for i, indiv_model, c in zip(range(len(individual_models)), individual_models, spot_colors):
+                ax[0].fill_between(self.lc.times.jd, indiv_model, no_spots_model,
+                                      color=c, alpha=0.4)
+                ax[1].fill_between(self.lc.times.jd,
+                                      (indiv_model - no_spots_model)/self.transit_params.rp**2,
+                                      0, color=c, alpha=0.4)
+
+        return final_filtered_spots
+
+    def integral_of_occultation(self, spot):
+        return spot.amplitude.value * np.sqrt(2 * np.pi * spot.sigma.value**2)
+
+    def find_overlapping_spots(self, spot_list):
+        overlapping_pairs = []
+        spots_with_overlap = []
+        for i in range(len(spot_list)):
+            for j in range(len(spot_list)):
+                if i < j:
+                    if (abs(spot_list[i].t0.value -
+                            spot_list[j].t0.value) <
+                        2.0*(spot_list[i].sigma.value +
+                         spot_list[j].sigma.value)):
+
+                        overlapping_pairs.append((i, j))
+
+                        if i not in spots_with_overlap:
+                            spots_with_overlap.append(i)
+                        if j not in spots_with_overlap:
+                            spots_with_overlap.append(j)
+
+        spots_without_overlap = [spot for i, spot in enumerate(spot_list)
+                                 if i not in spots_with_overlap]
+        return overlapping_pairs, spots_with_overlap, spots_without_overlap
 
     def get_spots(self):
 
@@ -490,7 +647,12 @@ class MCMCResults(object):
             print("theta={0}, phi={1}\n".format(t, p))
 
     def max_lnp_theta_phi_stsp(self):
-        spot_times = self.best_params[1::3]
+        #spot_times = self.best_params[1::3]
+
+        spots = self.get_spots_filtered()
+
+        spot_times = [spot.t0.value for spot in spots]
+
         spot_phis = []
         spot_thetas = []
         for t in spot_times:
@@ -561,7 +723,7 @@ class Measurement(object):
     Store a measurement from posterior distribution function with
     upper and lower errorbars
     """
-    def __init__(self, value, upper, lower):
+    def __init__(self, value, upper=None, lower=None):
         self.value = value
         self.upper = upper
         self.lower = lower
