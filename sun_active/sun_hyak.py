@@ -28,7 +28,7 @@ if os.path.exists('/Users/bmmorris/data/hat11/'):
 elif os.path.exists('/usr/lusers/bmmorris/data/hat11/'):
     # on Hyak
     light_curve_paths = glob('/usr/lusers/bmmorris/data/hat11/*slc.fits')
-    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/hat11')
+    output_dir = os.path.abspath('/gscratch/stf/bmmorris/friedrich/sun_active')
     mwo_dir = '/gscratch/stf/bmmorris/Mt_Wilson_Tilt/'
 elif os.path.exists('/local/tmp/hat11'):
     # on mist
