@@ -167,12 +167,12 @@ def get_spot_params_between_dates(start_time, end_time, mwo_dir,
 
 
 def get_simulated_solar_transit(spot_start_time, spot_end_time, light_curve,
-                                transit_params, mwo_dir):
+                                transit_params, mwo_dir, stsp_executable):
 
     spot_params = get_spot_params_between_dates(spot_start_time, spot_end_time, mwo_dir)
 
     s = STSP(light_curve, transit_params, spot_params)
-    stsp_times, stsp_fluxes = s.stsp_lc()
+    stsp_times, stsp_fluxes = s.stsp_lc(stsp_exec=stsp_executable)
 
     return stsp_times, stsp_fluxes
 

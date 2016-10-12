@@ -73,9 +73,10 @@ first_kepler_transit = transits[0].times.jd.mean()
 start_time = (Time('1957-01-01') +
               (lc.times.jd.mean() - first_kepler_transit) * u.day)
 end_time = start_time + 1*u.day
+stsp_executable = '/usr/lusers/bmmorris/git/STSP/stsp_20160831'
 stsp_time, stsp_flux = get_simulated_solar_transit(start_time, end_time,
                                                    lc, hat11_oot_params,
-                                                   mwo_dir)
+                                                   mwo_dir, stsp_executable)
 lc.fluxes *= stsp_flux
 
 lc_output_path = os.path.join(output_dir,
