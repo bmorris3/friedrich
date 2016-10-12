@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import sys
+import datetime
 from glob import glob
 import os, subprocess
 
@@ -106,9 +106,13 @@ class STSP(object):
         self.lc = lc
         self.transit_params = transit_params
         self.spot_params = np.array(spot_params)
+
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        random_integer = np.random.randint(0, 1e6)
+
         if outdir is None:
             self.outdir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                       '.friedrich_tmp'))
+                                       '.friedrich_tmp_{0}_{1}'.format(current_time, random_integer)))
         else:
             self.outdir = outdir
 
