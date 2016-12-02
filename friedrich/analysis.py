@@ -646,7 +646,7 @@ class MCMCResults(object):
         for t, p in zip(spot_theta, spot_phi):
             print("theta={0}, phi={1}\n".format(t, p))
 
-    def max_lnp_theta_phi_stsp(self):
+    def max_lnp_theta_phi_stsp(self, rotate_star=False):
         #spot_times = self.best_params[1::3]
 
         spots = self.get_spots_filtered()
@@ -662,7 +662,7 @@ class MCMCResults(object):
                                                                          spot_y,
                                                                          spot_z,
                                                                          self.transit_params,
-                                                                         [t])
+                                                                         [t], rotate_star=rotate_star)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
             spot_phis.append(spot_phi[0])
             spot_thetas.append(spot_theta[0])
@@ -748,7 +748,8 @@ class Transit(object):
     """
     Store a collection of spots
     """
-    def __init__(self, spot_list):
+    def __init__(self, spot_list, time=None):
         self.spots = spot_list
+        self.time = time
 
 

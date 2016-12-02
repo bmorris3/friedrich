@@ -112,7 +112,8 @@ class STSP(object):
 
         if outdir is None:
             self.outdir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                       '.friedrich_tmp_{0}_{1}'.format(current_time, random_integer)))
+                                          '.friedrich_tmp_{0}_{1}'
+                                          .format(current_time, random_integer)))
         else:
             self.outdir = outdir
 
@@ -210,6 +211,8 @@ class STSP(object):
         tbl = ascii.read(os.path.join(self.outdir, 'test_lcout.txt'))
         stsp_times, stsp_fluxes = tbl['col1'], tbl['col4']
 
+        self.safe_clean_up()
+
         if not t_bypass:
             return stsp_times - n_transits*self.transit_params.per, stsp_fluxes
         else: 
@@ -234,7 +237,7 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
 
     for path in chains_paths:
         m = MCMCResults(path, transit_params)
-        thetas, phis = m.max_lnp_theta_phi_stsp()
+        thetas, phis = m.max_lnp_theta_phi_stsp(rotate_star=True)
 
         phis[phis < 0] += 2*np.pi
         if len(thetas) > 1:
@@ -249,7 +252,8 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
 
 
                 s = STSP(mcmc.lc, mcmc.transit_params, spot_params)
-                t_model, f_model = s.stsp_lc()
+                #t_model, f_model = s.stsp_lc(stsp_exec=stsp_executable, t_bypass=True)
+                t_model, f_model = s.stsp_lc(stsp_exec=stsp_executable)
                 return t_model, f_model
 
             def spot_chi2(radii, mcmc=m):
@@ -269,6 +273,8 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
 
             from scipy.optimize import fmin
             best_radii = fmin(spot_chi2, init_radii[:], xtol=1e-8)
+
+            best_radii[best_radii < 0] = 0.000001
 
             if len(best_radii.shape) == 0:
                 best_radii = [best_radii.tolist()]
