@@ -240,7 +240,7 @@ def friedrich_results_to_stsp_inputs(results_dir, transit_params):
         thetas, phis = m.max_lnp_theta_phi_stsp(rotate_star=True)
 
         phis[phis < 0] += 2*np.pi
-        if len(thetas) > 1:
+        if len(thetas) > 0:
 
             def spot_model(radii, mcmc, thetas=thetas, phis=phis):
                 if len(thetas) > 1:

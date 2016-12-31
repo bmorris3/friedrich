@@ -235,7 +235,7 @@ class MCMCResults(object):
                                  for spot in spots])
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 10 for spot in spots])
+        spots_significant = np.array([spot.delta_BIC > 20 for spot in spots])
 
         # Filter out overlapping or unresolved spots:
         valid_spot_shapes = spots_significant & spots_skinny
@@ -260,8 +260,6 @@ class MCMCResults(object):
             frac_area_a = area_a / (area_a + area_b)
             frac_area_b = area_b / (area_a + area_b)
 
-            print(frac_area_a, frac_area_b)
-
             all_other_spots = [spot for i, spot in enumerate(check_these_spots)
                                if i not in spot_pair]
 
@@ -269,7 +267,8 @@ class MCMCResults(object):
             new_amp = spot_a.amplitude.value if frac_area_a > 0.5 else spot_b.amplitude.value
             new_sigma = spot_a.sigma.value * frac_area_a + spot_b.sigma.value * frac_area_b
             # new_sigma = np.max([spot_a.sigma.value, spot_b.sigma.value])
-            new_BIC = np.max([spot_a.delta_BIC, spot_b.delta_BIC])
+            # new_BIC = np.max([spot_a.delta_BIC, spot_b.delta_BIC])
+            new_BIC = np.sum([spot_a.delta_BIC, spot_b.delta_BIC])
             new_spot = Spot(Measurement(new_amp), Measurement(new_time),
                             Measurement(new_sigma), new_BIC)
             all_other_spots.append(new_spot)
@@ -283,11 +282,12 @@ class MCMCResults(object):
         non_overlapping_spots = deepcopy(check_these_spots)
 
         # Vet the non-overlapping spots to make sure they meet the original priors
-        spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
-                                 for spot in non_overlapping_spots])
+        # spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
+        #                          for spot in non_overlapping_spots])
+        spots_skinny = np.ones(len(non_overlapping_spots)).astype(bool)
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 10
+        spots_significant = np.array([spot.delta_BIC > 20
                                       for spot in non_overlapping_spots])
 
         # Doesn't work on 033
@@ -337,7 +337,7 @@ class MCMCResults(object):
                 ax[1].fill_between(self.lc.times.jd,
                                       (indiv_model - no_spots_model)/self.transit_params.rp**2,
                                       0, color=c, alpha=0.4)
-
+            #plt.show()
         return final_filtered_spots
 
     def integral_of_occultation(self, spot):
