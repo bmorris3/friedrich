@@ -29,6 +29,9 @@ import numpy as np
 import os
 
 
+delta_BIC_threshold = 20
+
+
 class MCMCResults(object):
     """
     Visualize results from `friedrich.fitting.run_emcee_seeded`
@@ -195,7 +198,7 @@ class MCMCResults(object):
                 delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
 
             style_kwargs = {}
-            if delta_BICs[i] <= 10:
+            if delta_BICs[i] <= delta_BIC_threshold:
                 style_kwargs['lw'] = 3
                 style_kwargs['ls'] = '--'
                 style_kwargs['alpha'] = 0.5
@@ -235,7 +238,8 @@ class MCMCResults(object):
                                  for spot in spots])
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 20 for spot in spots])
+        spots_significant = np.array([spot.delta_BIC > delta_BIC_threshold
+                                      for spot in spots])
 
         # Filter out overlapping or unresolved spots:
         valid_spot_shapes = spots_significant & spots_skinny
@@ -287,7 +291,7 @@ class MCMCResults(object):
         spots_skinny = np.ones(len(non_overlapping_spots)).astype(bool)
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 20
+        spots_significant = np.array([spot.delta_BIC > delta_BIC_threshold
                                       for spot in non_overlapping_spots])
 
         # Doesn't work on 033
@@ -428,7 +432,7 @@ class MCMCResults(object):
                 delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
 
             style_kwargs = {}
-            if delta_BICs[i] <= 10:
+            if delta_BICs[i] <= delta_BIC_threshold:
                 style_kwargs['lw'] = 3
                 style_kwargs['ls'] = '--'
                 style_kwargs['alpha'] = 0.5
@@ -646,11 +650,17 @@ class MCMCResults(object):
         for t, p in zip(spot_theta, spot_phi):
             print("theta={0}, phi={1}\n".format(t, p))
 
-    def max_lnp_theta_phi_stsp(self, rotate_star=False):
+    def max_lnp_theta_phi_stsp(self, output_bic=True, rotate_star=False):
         #spot_times = self.best_params[1::3]
 
         spots = self.get_spots_filtered()
 
+        if output_bic:
+            with open('spot_props', 'a') as w:
+                for spot in spots:
+                    w.write("{0} {1} {2} {3}\n".format(spot.t0.value,
+                        spot.amplitude.value, spot.sigma.value, spot.delta_BIC))
+            
         spot_times = [spot.t0.value for spot in spots]
 
         spot_phis = []
