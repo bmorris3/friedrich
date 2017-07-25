@@ -385,7 +385,8 @@ def project_planet_to_stellar_surface(x, y):
 
 
 def observer_view_to_stellar_view(x, y, z, transit_params, times,
-                                  stellar_t0=0.0):
+                                  stellar_t0=0.0, rotate_star=False):
+    # rotate_star: added on Oct 14, 2016 for STSP simulations
     """
     First rotate to remove lambda (rotation about z-axis). Then rotate to
     remove i_s (rotation about x-axis). Then rotate one last time to remove
@@ -397,9 +398,17 @@ def observer_view_to_stellar_view(x, y, z, transit_params, times,
     per_rot = transit_params.per_rot
     t_mean = np.mean(times)
 
-    x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star), 
-                        alpha=-np.pi/2)#(-2*np.pi/per_rot *
-                              # (np.abs(t_mean - transit_params.t0) % per_rot)))
+    if not rotate_star:
+        x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star),
+                            alpha=-np.pi/2)#(-2*np.pi/per_rot *
+                                  # (np.abs(t_mean - transit_params.t0) % per_rot)))
+    else:
+        print('degrees: ', 2 * np.pi / per_rot * (np.abs(t_mean - transit_params.t0) % per_rot))
+        x_p, y_p, z_p = R_z(*R_x(*R_z(x, y, z, alpha=-lam_star), alpha=-i_star),
+                            #alpha=(-2*np.pi/per_rot *
+                            alpha=(-np.pi/2 + 2 * np.pi / per_rot *
+                                   (np.abs(t_mean - transit_params.t0) % per_rot)))
+
     return x_p, y_p, z_p
 
 
@@ -457,15 +466,17 @@ def get_lat_lon_grid(n_points, transit_params, transit_view=True):
     return [lat_x, lat_y, lat_z], [lon_x, lon_y, lon_z]
 
 
-def times_to_occulted_lat_lon(times, transit_params):
+def times_to_occulted_lat_lon(times, transit_params, rotate_star=False):
     """Only works for single time inputs at the moment"""
+    # rotate_star: added on Oct 14, 2016 for STSP simulations
+
     X, Y, Z = planet_position_cartesian(times, transit_params)
     spot_x, spot_y, spot_z = project_planet_to_stellar_surface(X, Y)
 
     spot_x_s, spot_y_s, spot_z_s = observer_view_to_stellar_view(spot_x, spot_y,
                                                                  spot_z,
                                                                  transit_params,
-                                                                 times)
+                                                                 times, rotate_star=rotate_star)
     spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s,
                                                           spot_y_s, spot_z_s)
     longitude = spot_phi

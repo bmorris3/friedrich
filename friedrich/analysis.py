@@ -29,6 +29,9 @@ import numpy as np
 import os
 
 
+delta_BIC_threshold = 20
+
+
 class MCMCResults(object):
     """
     Visualize results from `friedrich.fitting.run_emcee_seeded`
@@ -195,7 +198,7 @@ class MCMCResults(object):
                 delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
 
             style_kwargs = {}
-            if delta_BICs[i] <= 10:
+            if delta_BICs[i] <= delta_BIC_threshold:
                 style_kwargs['lw'] = 3
                 style_kwargs['ls'] = '--'
                 style_kwargs['alpha'] = 0.5
@@ -235,7 +238,8 @@ class MCMCResults(object):
                                  for spot in spots])
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 10 for spot in spots])
+        spots_significant = np.array([spot.delta_BIC > delta_BIC_threshold
+                                      for spot in spots])
 
         # Filter out overlapping or unresolved spots:
         valid_spot_shapes = spots_significant & spots_skinny
@@ -260,8 +264,6 @@ class MCMCResults(object):
             frac_area_a = area_a / (area_a + area_b)
             frac_area_b = area_b / (area_a + area_b)
 
-            print(frac_area_a, frac_area_b)
-
             all_other_spots = [spot for i, spot in enumerate(check_these_spots)
                                if i not in spot_pair]
 
@@ -269,7 +271,8 @@ class MCMCResults(object):
             new_amp = spot_a.amplitude.value if frac_area_a > 0.5 else spot_b.amplitude.value
             new_sigma = spot_a.sigma.value * frac_area_a + spot_b.sigma.value * frac_area_b
             # new_sigma = np.max([spot_a.sigma.value, spot_b.sigma.value])
-            new_BIC = np.max([spot_a.delta_BIC, spot_b.delta_BIC])
+            # new_BIC = np.max([spot_a.delta_BIC, spot_b.delta_BIC])
+            new_BIC = np.sum([spot_a.delta_BIC, spot_b.delta_BIC])
             new_spot = Spot(Measurement(new_amp), Measurement(new_time),
                             Measurement(new_sigma), new_BIC)
             all_other_spots.append(new_spot)
@@ -283,11 +286,12 @@ class MCMCResults(object):
         non_overlapping_spots = deepcopy(check_these_spots)
 
         # Vet the non-overlapping spots to make sure they meet the original priors
-        spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
-                                 for spot in non_overlapping_spots])
+        # spots_skinny = np.array([spot.amplitude.value >= 5e-3 * spot.sigma.value
+        #                          for spot in non_overlapping_spots])
+        spots_skinny = np.ones(len(non_overlapping_spots)).astype(bool)
 
         # Filter out spots that don't contribute significantly to the fit:
-        spots_significant = np.array([spot.delta_BIC > 10
+        spots_significant = np.array([spot.delta_BIC > delta_BIC_threshold
                                       for spot in non_overlapping_spots])
 
         # Doesn't work on 033
@@ -337,7 +341,7 @@ class MCMCResults(object):
                 ax[1].fill_between(self.lc.times.jd,
                                       (indiv_model - no_spots_model)/self.transit_params.rp**2,
                                       0, color=c, alpha=0.4)
-
+            #plt.show()
         return final_filtered_spots
 
     def integral_of_occultation(self, spot):
@@ -428,7 +432,7 @@ class MCMCResults(object):
                 delta_BICs[i] = np.abs(bic_spot - cumulative_BICs[i-1])
 
             style_kwargs = {}
-            if delta_BICs[i] <= 10:
+            if delta_BICs[i] <= delta_BIC_threshold:
                 style_kwargs['lw'] = 3
                 style_kwargs['ls'] = '--'
                 style_kwargs['alpha'] = 0.5
@@ -646,11 +650,17 @@ class MCMCResults(object):
         for t, p in zip(spot_theta, spot_phi):
             print("theta={0}, phi={1}\n".format(t, p))
 
-    def max_lnp_theta_phi_stsp(self):
+    def max_lnp_theta_phi_stsp(self, output_bic=True, rotate_star=False):
         #spot_times = self.best_params[1::3]
 
         spots = self.get_spots_filtered()
 
+        if output_bic:
+            with open('spot_props', 'a') as w:
+                for spot in spots:
+                    w.write("{0} {1} {2} {3}\n".format(spot.t0.value,
+                        spot.amplitude.value, spot.sigma.value, spot.delta_BIC))
+            
         spot_times = [spot.t0.value for spot in spots]
 
         spot_phis = []
@@ -662,7 +672,7 @@ class MCMCResults(object):
                                                                          spot_y,
                                                                          spot_z,
                                                                          self.transit_params,
-                                                                         [t])
+                                                                         [t], rotate_star=rotate_star)
             spot_r, spot_theta, spot_phi = cartesian_to_spherical(spot_x_s, spot_y_s, spot_z_s)
             spot_phis.append(spot_phi[0])
             spot_thetas.append(spot_theta[0])
@@ -748,7 +758,8 @@ class Transit(object):
     """
     Store a collection of spots
     """
-    def __init__(self, spot_list):
+    def __init__(self, spot_list, time=None):
         self.spots = spot_list
+        self.time = time
 
 
