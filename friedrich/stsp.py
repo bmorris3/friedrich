@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160123'
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160808'
 #stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160815'
-stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160828'
+# stsp_executable = '/astro/users/bmmorris/git/STSP/stsp_20160828'
+stsp_executable = '/Users/bmmorris/git/STSP/stsp'
 
 infile_template_l = """#PLANET PROPERTIES
 1							; Number of planets -- (if there are more than 1 planet, then the set of 8 planet properties are repeated)

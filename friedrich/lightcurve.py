@@ -514,6 +514,33 @@ def k17_params_morris():
     return params
 
 
+def koi340():
+    sqrt_e_cosw = -0.26148981823720624
+    sqrt_e_sinw = -0.41852621258053352
+    eccentricity = np.sqrt(sqrt_e_cosw**2 + sqrt_e_sinw**2)**2
+    omega = np.degrees(np.arctan2(sqrt_e_sinw, sqrt_e_cosw))
+
+    params = batman.TransitParams()
+    params.t0 = 1367.9569793250512   # time of inferior conjunction
+    params.per = 23.673113071196031         # orbital period
+    params.rp = 0.14199864450891503            # planet radius (in units of stellar radii)
+    params.b = 0.33049686158647923                    # impact parameter
+    params.inc = 89.289962255853283              # orbital inclination (in degrees)
+
+    params.ecc = eccentricity      # eccentricity
+    params.w = omega               # longitude of periastron (in degrees)
+    params.a = 10    # semi-major axis (in units of stellar radii)
+    params.u = [0.6237552, -0.28578760000000003, 0.867126, -0.447482]      # limb darkening coefficients
+    params.limb_dark = "nonlinear" # limb darkening model
+
+    # Required by some friedrich methods below but not by batman:
+    params.duration = 0.59876093281048781	       # transit duration
+    params.lam = 0.0
+    params.inc_stellar = 90
+    params.per_rot = 12.936
+    return params
+
+
 def generate_lc_depth(times, depth, transit_params):
     """
     Generate a model transit light curve.
